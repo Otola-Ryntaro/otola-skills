@@ -1,0 +1,47 @@
+<!doctype html>
+<!--
+  where: project-hero/assets/hero-template.html
+  what : ヒーロー画像合成用テンプレート。プレースホルダ置換→Playwright スクショで 1280x640 PNG を得る
+  why  : AI 画像の文字崩れを避け、プロジェクト名は必ず正確な書体・綴りで載せるため
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="{{FONT_URL}}" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 1280px; height: 640px; overflow: hidden; }
+  .hero {
+    position: relative; width: 1280px; height: 640px;
+    background: #10131a url('{{BG_IMAGE}}') center / cover no-repeat;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+  }
+  /* 文字可読性のためのオーバーレイ。案ごとに {{OVERLAY_CSS}} で上書き可 */
+  .hero::before {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(8,10,16,.15), rgba(8,10,16,.55));
+  }
+  .title, .tagline { position: relative; z-index: 1; text-align: center; }
+  .title {
+    font-family: '{{FONT_FAMILY}}', sans-serif;
+    font-size: 96px; line-height: 1.05; color: #ffffff;
+    letter-spacing: .01em; text-shadow: 0 4px 24px rgba(0,0,0,.45);
+    padding: 0 80px;
+  }
+  .tagline {
+    font-family: '{{FONT_FAMILY}}', sans-serif;
+    font-size: 28px; color: rgba(255,255,255,.85); margin-top: 24px;
+    letter-spacing: .06em;
+  }
+  {{OVERLAY_CSS}}
+</style>
+</head>
+<body>
+  <div class="hero">
+    <div class="title">{{PROJECT_NAME}}</div>
+    <div class="tagline">{{TAGLINE}}</div>
+  </div>
+</body>
+</html>

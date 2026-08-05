@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<!--
+  where: daily_report/YYYY-MM-DD_[slug]_visualize.html
+  what : shime（締め作業）の可視化レポート。このセッションの更新作業をノンプログラマ向けに提示する
+  why  : 日報(.md)は一覧性重視、こちらは「何が起きたか」を一目で掴むためのダッシュボード
+-->
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{TITLE}} — セッション更新レポート</title>
+<style>
+  :root{
+    --bg:#0f1216; --card:#181c23; --card2:#1f242d; --line:#2a313c;
+    --txt:#e6e9ee; --sub:#9aa4b2; --accent:#c084fc; --accent2:#7dd3fc;
+    --warn:#fbbf24; --good:#34d399; --bad:#f87171; --pill:#273043;
+    --gold:#fbbf24;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+    line-height:1.75;font-size:15px}
+  .wrap{max-width:980px;margin:0 auto;padding:32px 20px 80px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:.02em}
+  h2{font-size:21px;margin:48px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+  h2 .n{color:var(--accent);font-size:15px;margin-right:8px}
+  h3{font-size:16px;margin:22px 0 8px;color:var(--accent2)}
+  p{margin:8px 0}
+  a{color:var(--accent2)}
+  code{background:#0b0e12;border:1px solid var(--line);border-radius:5px;
+    padding:1px 6px;font-size:13px;font-family:"SF Mono",Menlo,Consolas,monospace}
+  .lead{color:var(--sub);font-size:16px;margin:4px 0 0}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 4px}
+  .pill{background:var(--pill);border:1px solid var(--line);border-radius:999px;
+    padding:4px 12px;font-size:12.5px;color:var(--sub)}
+  .pill b{color:var(--txt)}
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:1fr 1fr 1fr}
+  @media(max-width:720px){.g2,.g3{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .card h3{margin-top:0}
+  .card .tag{font-size:11.5px;color:var(--bg);background:var(--accent);
+    border-radius:5px;padding:1px 7px;font-weight:700;display:inline-block;margin-bottom:6px}
+  .card .tag.gold{background:var(--gold)}
+  .card .tag.blue{background:var(--accent2);color:var(--bg)}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--card2);color:var(--accent2);font-weight:600}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  td.center{text-align:center}
+  .big{color:var(--good);font-weight:700}
+  .box{border-radius:12px;padding:16px 18px;margin:16px 0}
+  .box.warn{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.4)}
+  .box.good{background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.35)}
+  .box.info{background:rgba(125,211,252,.07);border:1px solid rgba(125,211,252,.3)}
+  .box.purple{background:rgba(192,132,252,.08);border:1px solid rgba(192,132,252,.35)}
+  .box .ttl{font-weight:700;margin-bottom:4px}
+  .box.warn .ttl{color:var(--warn)}
+  .box.good .ttl{color:var(--good)}
+  .box.info .ttl{color:var(--accent2)}
+  .box.purple .ttl{color:var(--accent)}
+  .flow{background:#0b0e12;border:1px solid var(--line);border-radius:10px;
+    padding:14px 16px;font-family:"SF Mono",Menlo,monospace;font-size:12.5px;
+    color:var(--sub);overflow-x:auto;white-space:pre;line-height:1.5}
+  ul{margin:6px 0;padding-left:22px}
+  li{margin:4px 0}
+  .sub{color:var(--sub)}
+  .foot{margin-top:50px;padding-top:18px;border-top:1px solid var(--line);color:var(--sub);font-size:12.5px}
+  hr{border:none;border-top:1px dashed var(--line);margin:26px 0}
+  .kicker{color:var(--accent);font-size:12.5px;letter-spacing:.18em;text-transform:uppercase}
+  .quote{border-left:3px solid var(--accent);padding:4px 14px;margin:14px 0;color:var(--sub);font-style:italic;background:rgba(192,132,252,.04)}
+  .check{color:var(--good);font-weight:700}
+  .cross{color:var(--bad);font-weight:700}
+  .step{display:flex;gap:12px;margin:10px 0;align-items:flex-start}
+  .step .num{flex:0 0 28px;height:28px;line-height:28px;text-align:center;
+    border-radius:50%;background:var(--accent);color:var(--bg);font-weight:700;font-size:13px}
+  .step .body{flex:1}
+  .step .body b{color:var(--accent2)}
+  .hero{background:linear-gradient(135deg,rgba(192,132,252,.14),rgba(125,211,252,.08));
+    border:1px solid var(--accent);border-radius:14px;padding:22px 24px;margin:22px 0}
+  .hero .ttl{font-size:13px;color:var(--accent);letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;margin-bottom:10px}
+  .hero .action{font-size:18px;font-weight:700;margin:6px 0}
+  .hero .why{color:var(--sub);font-size:14px;margin:4px 0 0}
+  .hero code{font-size:14px}
+  .shots{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+  @media(max-width:720px){.shots{grid-template-columns:1fr}}
+  .shots figure{margin:0;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:10px;overflow:hidden}
+  .shots img{width:100%;height:auto;border-radius:8px;display:block;cursor:zoom-in}
+  .shots figcaption{color:var(--sub);font-size:12.5px;margin-top:8px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="kicker">セッション更新レポート</div>
+  <h1>{{TITLE}}</h1>
+  <p class="lead">{{ONE_LINE_SUMMARY}}</p>
+
+  <div class="meta">
+    <span class="pill">📂 <b>{{PROJECT_NAME}}</b></span>
+    <span class="pill">📅 <b>{{DATE}}</b></span>
+    <span class="pill">📄 日報 <b>{{DAILY_REPORT_FILENAME}}</b></span>
+    <span class="pill">🗂 変更ファイル数 <b>{{CHANGED_FILE_COUNT}}</b></span>
+  </div>
+
+  <!-- 1. Hero: 次回やること（アクションファースト・省略不可）。
+       やることが無い場合は「✅ このセッションで完結。次回やることはありません」に差し替える -->
+  <div class="hero">
+    <div class="ttl">⚡ 次回やること</div>
+    <div class="action">1. {{NEXT_ACTION_1}}</div>
+    <p class="why">{{NEXT_ACTION_1_WHY — なぜこれをやるのか 1 文}}</p>
+  </div>
+
+  <div class="box purple">
+    <div class="ttl">💡 一言で言うと</div>
+    {{SUMMARY_BOX_TEXT}}
+  </div>
+
+  <!-- 2. 本日のスクショ（当日撮影分があれば。無ければセクションごと省略） -->
+  <h2><span class="n">00</span>本日のスクショ</h2>
+  <p>{{SHOTS_INTRO — どの画面で何が変わったか 2〜3 文}}</p>
+  <div class="shots">
+    <figure>
+      <img src="data:image/png;base64,{{BASE64_1}}" alt="{{ALT_1}}">
+      <figcaption>{{CAPTION_1 — 何の画面で何が確認できるか 1 文}}</figcaption>
+    </figure>
+  </div>
+
+  <h2><span class="n">01</span>今日やったこと</h2>
+
+  <div class="grid g2">
+    <!-- 「今日やったこと」の各項目を card として並べる。1項目=1card。
+         項目数が多い場合は g2/g3 を使い分ける -->
+    <div class="card">
+      <span class="tag">作業</span>
+      <h3>{{WORK_ITEM_TITLE}}</h3>
+      <p class="sub">{{WORK_ITEM_DESC}}</p>
+    </div>
+  </div>
+
+  <h2><span class="n">02</span>変更ファイル一覧</h2>
+
+  <table>
+    <thead>
+      <tr><th>ファイル</th><th>変更内容</th></tr>
+    </thead>
+    <tbody>
+      <!-- git status / diff や会話履歴から拾えたファイルを1行ずつ -->
+      <tr><td><code>{{FILE_PATH}}</code></td><td>{{FILE_CHANGE_DESC}}</td></tr>
+    </tbody>
+  </table>
+
+  <h2><span class="n">03</span>完了したこと</h2>
+
+  <div class="box good">
+    <div class="ttl">✅ 完了</div>
+    <ul>
+      <li>{{DONE_ITEM}}</li>
+    </ul>
+  </div>
+
+  <h2><span class="n">04</span>未完了・残タスク</h2>
+
+  <div class="box warn">
+    <div class="ttl">⚠️ 未完了・残タスク</div>
+    <ul>
+      <li>{{TODO_ITEM}}</li>
+    </ul>
+  </div>
+  <!-- 未完了が無ければこのセクション自体を省略してよい -->
+
+  <h2><span class="n">05</span>決定事項・気づき</h2>
+
+  <div class="quote">{{DECISION_OR_LEARNING}}</div>
+
+  <!-- 「次回やること」は冒頭 Hero に移動済み。末尾には置かない -->
+
+  <div class="foot">
+    セッション日: {{DATE}}<br>
+    生成: shime（締め作業スキル） --visualize<br>
+    対応する日報: {{DAILY_REPORT_FILENAME}}
+  </div>
+
+</div>
+</body>
+</html>

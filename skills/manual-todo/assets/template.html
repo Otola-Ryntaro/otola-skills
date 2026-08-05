@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__TITLE__</title>
+<style>
+  /* manual-todo はホワイトベース・デイモード（ユーザー指定の例外）。
+     構成・コンポーネント語彙は visualize-common に従うが、配色のみライトテーマ */
+  :root {
+    --bg: #f8fafc;
+    --panel: #ffffff;
+    --panel-2: #f1f5f9;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --text-dim: #64748b;
+    --text-mute: #94a3b8;
+    --accent: #16a34a;
+    --accent-dim: #dcfce7;
+    --done: #94a3b8;
+    --shadow: 0 1px 3px rgba(15,23,42,0.08);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  header {
+    position: sticky;
+    top: 0;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 24px 14px;
+    z-index: 100;
+    box-shadow: var(--shadow);
+  }
+  header .project-tag {
+    margin: 0 0 6px;
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  header h1 {
+    margin: 0 0 4px;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+  header .subtitle {
+    margin: 0 0 12px;
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .progress-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .progress-bar {
+    flex: 1;
+    height: 8px;
+    background: var(--panel-2);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 4px;
+  }
+  .progress-text {
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    color: var(--text-dim);
+    min-width: 80px;
+    text-align: right;
+  }
+  .progress-text strong {
+    color: var(--accent);
+    font-weight: 600;
+  }
+  main {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+  .stage {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 18px;
+    overflow: hidden;
+  }
+  .stage-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    padding: 14px 18px;
+    background: var(--panel-2);
+    border-bottom: 1px solid var(--border);
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .stage-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .stage-name { flex: 1; }
+  .stage-progress {
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    color: var(--text-dim);
+    background: var(--bg);
+    padding: 3px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+  .stage-progress.complete {
+    color: var(--accent);
+    border-color: var(--accent-dim);
+  }
+  .stage-desc {
+    margin: 0;
+    padding: 10px 18px 4px;
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .tasks {
+    list-style: none;
+    margin: 0;
+    padding: 6px 0 8px;
+  }
+  .task {
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .task:last-child { border-bottom: none; }
+  .task:hover { background: rgba(15,23,42,0.03); }
+  .task label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .task input[type="checkbox"] {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    margin: 3px 0 0;
+    border: 2px solid var(--text-mute);
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .task input[type="checkbox"]:hover {
+    border-color: var(--accent);
+  }
+  .task input[type="checkbox"]:checked {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .task input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 0px;
+    width: 5px;
+    height: 10px;
+    border: solid var(--bg);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+  .task-title {
+    font-weight: 500;
+    line-height: 1.5;
+  }
+  .task.done .task-title {
+    color: var(--done);
+    text-decoration: line-through;
+  }
+  .task.done .task-body { opacity: 0.5; }
+  .task-body {
+    margin: 6px 0 4px 28px;
+  }
+  .task-desc {
+    margin: 0 0 6px;
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1.65;
+  }
+  .task-link {
+    display: inline-block;
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 13px;
+    margin-right: 12px;
+    border-bottom: 1px dashed var(--accent-dim);
+    padding-bottom: 1px;
+  }
+  .task-link:hover {
+    color: #15803d;
+    border-bottom-style: solid;
+  }
+  .task-meta {
+    color: var(--text-mute);
+    font-size: 12px;
+    margin-left: 4px;
+  }
+  .task-cmd {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin: 6px 0;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    color: var(--text);
+    overflow-x: auto;
+  }
+  .task-cmd code {
+    background: none;
+    padding: 0;
+    color: inherit;
+  }
+  .task-fields {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 4px 14px;
+    margin: 6px 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  .task-fields dt {
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+  /* Hero: 最初にやるべき未完了タスクを冒頭に大きく表示（JS が自動で埋める） */
+  .hero {
+    max-width: 820px;
+    margin: 24px auto 0;
+    padding: 0 24px;
+  }
+  .hero-card {
+    background: linear-gradient(135deg, rgba(22,163,74,0.08), rgba(14,165,233,0.05));
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 18px 22px;
+  }
+  .hero-card .hero-label {
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin: 0 0 8px;
+  }
+  .hero-card .hero-task {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+  .hero-card .hero-stage {
+    color: var(--text-dim);
+    font-size: 13px;
+    margin: 0;
+  }
+  /* なぜやるか／完了するとどうなるか（各タスク必須の地の文） */
+  .task-why, .task-after {
+    margin: 4px 0;
+    font-size: 13px;
+    line-height: 1.65;
+  }
+  .task-why { color: var(--text-dim); }
+  .task-why::before { content: "🧭 なぜ: "; color: var(--accent); font-weight: 600; }
+  .task-after { color: var(--text-dim); }
+  .task-after::before { content: "✅ 完了すると: "; color: var(--accent); font-weight: 600; }
+  /* 参考スクショ（base64 埋め込み・任意） */
+  .task-shot {
+    margin: 8px 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+  }
+  .task-shot img {
+    width: 100%;
+    height: auto;
+    border-radius: 6px;
+    display: block;
+  }
+  .task-shot figcaption {
+    color: var(--text-mute);
+    font-size: 12px;
+    margin-top: 6px;
+  }
+  .task-fields dd {
+    margin: 0;
+    color: var(--text);
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    word-break: break-all;
+  }
+  footer {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 16px 24px 48px;
+    text-align: center;
+    color: var(--text-mute);
+    font-size: 12px;
+  }
+  #reset-btn {
+    background: transparent;
+    color: var(--text-mute);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  #reset-btn:hover {
+    color: #dc2626;
+    border-color: #fecaca;
+  }
+  .celebration {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    background: var(--panel);
+    border: 2px solid var(--accent);
+    border-radius: 14px;
+    padding: 28px 40px;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(22, 163, 74, 0.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 1000;
+  }
+  .celebration.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  .celebration h2 {
+    margin: 0 0 6px;
+    font-size: 22px;
+    color: var(--accent);
+  }
+  .celebration p {
+    margin: 0;
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="project-tag">📂 __PROJECT__</p>
+  <h1>__TITLE__</h1>
+  <p class="subtitle">__SUBTITLE__</p>
+  <div class="progress-container">
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    <span class="progress-text"><strong id="done-count">0</strong>/<span id="total-count">0</span> 完了</span>
+  </div>
+</header>
+
+<div class="hero" id="hero" hidden>
+  <div class="hero-card">
+    <p class="hero-label">⚡ いまやること</p>
+    <p class="hero-task" id="hero-task"></p>
+    <p class="hero-stage" id="hero-stage"></p>
+  </div>
+</div>
+
+<main id="stages-container">
+__STAGES__
+</main>
+
+<footer>
+  <button id="reset-btn">進捗をリセット</button>
+</footer>
+
+<div class="celebration" id="celebration">
+  <h2>全タスク完了</h2>
+  <p>お疲れさまでした。</p>
+</div>
+
+<script>
+(function() {
+  const STORAGE_KEY = "manual-todo:" + "__STORAGE_KEY__";
+
+  const checkboxes = Array.from(document.querySelectorAll('input[type="checkbox"][data-task-id]'));
+  const progressFill = document.getElementById('progress-fill');
+  const doneCount = document.getElementById('done-count');
+  const totalCount = document.getElementById('total-count');
+  const resetBtn = document.getElementById('reset-btn');
+  const celebration = document.getElementById('celebration');
+
+  totalCount.textContent = checkboxes.length;
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return {};
+      return JSON.parse(raw);
+    } catch (e) { return {}; }
+  }
+
+  function saveState(state) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+
+  function updateStageProgress() {
+    const stages = document.querySelectorAll('.stage');
+    stages.forEach(stage => {
+      const cbs = stage.querySelectorAll('input[type="checkbox"][data-task-id]');
+      const done = Array.from(cbs).filter(cb => cb.checked).length;
+      const total = cbs.length;
+      const indicator = stage.querySelector('.stage-progress');
+      if (indicator) {
+        indicator.textContent = done + '/' + total;
+        indicator.classList.toggle('complete', done === total && total > 0);
+      }
+    });
+  }
+
+  function updateHero() {
+    const hero = document.getElementById('hero');
+    const heroTask = document.getElementById('hero-task');
+    const heroStage = document.getElementById('hero-stage');
+    if (!hero) return;
+    const next = checkboxes.find(cb => !cb.checked);
+    if (!next) { hero.hidden = true; return; }
+    const task = next.closest('.task');
+    const stage = next.closest('.stage');
+    const title = task ? task.querySelector('.task-title') : null;
+    const stageName = stage ? stage.querySelector('.stage-name') : null;
+    heroTask.textContent = title ? title.textContent : '';
+    heroStage.textContent = stageName ? 'Stage: ' + stageName.textContent : '';
+    hero.hidden = false;
+  }
+
+  function updateProgress(animateCelebration) {
+    const done = checkboxes.filter(cb => cb.checked).length;
+    const total = checkboxes.length;
+    const pct = total > 0 ? (done / total) * 100 : 0;
+    progressFill.style.width = pct + '%';
+    doneCount.textContent = done;
+    updateStageProgress();
+    updateHero();
+
+    if (animateCelebration && done === total && total > 0) {
+      celebration.classList.add('show');
+      setTimeout(() => celebration.classList.remove('show'), 2200);
+    }
+  }
+
+  const initialState = loadState();
+  let initiallyComplete = false;
+  checkboxes.forEach(cb => {
+    const id = cb.dataset.taskId;
+    if (initialState[id]) {
+      cb.checked = true;
+      cb.closest('.task').classList.add('done');
+    }
+  });
+  initiallyComplete = checkboxes.length > 0 && checkboxes.every(cb => cb.checked);
+  updateProgress(false);
+
+  checkboxes.forEach(cb => {
+    cb.addEventListener('change', () => {
+      const state = loadState();
+      state[cb.dataset.taskId] = cb.checked;
+      saveState(state);
+      cb.closest('.task').classList.toggle('done', cb.checked);
+      updateProgress(!initiallyComplete);
+      initiallyComplete = false;
+    });
+  });
+
+  resetBtn.addEventListener('click', () => {
+    if (!confirm('全タスクのチェックを外しますか？')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    checkboxes.forEach(cb => {
+      cb.checked = false;
+      cb.closest('.task').classList.remove('done');
+    });
+    updateProgress(false);
+  });
+})();
+</script>
+
+</body>
+</html>

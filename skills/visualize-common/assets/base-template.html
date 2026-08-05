@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<!--
+  where: visualize-common/assets/base-template.html
+  what : 可視化 HTML の正本スケルトン（アクションファースト構成 + ダークテーマ + スクショギャラリー）
+  why  : 新規テンプレ作成・既存テンプレ改訂時の見本。各スキルはこれを差し替えず、自分の assets/ テンプレをこの構成に合わせる
+-->
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{TITLE}}</title>
+<style>
+  :root{
+    --bg:#0f1216; --card:#181c23; --card2:#1f242d; --line:#2a313c;
+    --txt:#e6e9ee; --sub:#9aa4b2; --accent:#c084fc; --accent2:#7dd3fc;
+    --warn:#fbbf24; --good:#34d399; --bad:#f87171; --pill:#273043;
+    --gold:#fbbf24;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+    line-height:1.75;font-size:15px}
+  .wrap{max-width:980px;margin:0 auto;padding:32px 20px 80px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:.02em}
+  h2{font-size:21px;margin:48px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+  h2 .n{color:var(--accent);font-size:15px;margin-right:8px}
+  h3{font-size:16px;margin:22px 0 8px;color:var(--accent2)}
+  p{margin:8px 0}
+  a{color:var(--accent2)}
+  code{background:#0b0e12;border:1px solid var(--line);border-radius:5px;
+    padding:1px 6px;font-size:13px;font-family:"SF Mono",Menlo,Consolas,monospace}
+  .lead{color:var(--sub);font-size:16px;margin:4px 0 0}
+  .kicker{color:var(--accent);font-size:12.5px;letter-spacing:.18em;text-transform:uppercase}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 4px}
+  .pill{background:var(--pill);border:1px solid var(--line);border-radius:999px;
+    padding:4px 12px;font-size:12.5px;color:var(--sub)}
+  .pill b{color:var(--txt)}
+  .hero{background:linear-gradient(135deg,rgba(192,132,252,.14),rgba(125,211,252,.08));
+    border:1px solid var(--accent);border-radius:14px;padding:22px 24px;margin:22px 0}
+  .hero .ttl{font-size:13px;color:var(--accent);letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;margin-bottom:10px}
+  .hero .action{font-size:18px;font-weight:700;margin:6px 0}
+  .hero .why{color:var(--sub);font-size:14px;margin:4px 0 0}
+  .hero code{font-size:14px}
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:1fr 1fr 1fr}
+  @media(max-width:720px){.g2,.g3{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .card h3{margin-top:0}
+  .card .tag{font-size:11.5px;color:var(--bg);background:var(--accent);
+    border-radius:5px;padding:1px 7px;font-weight:700;display:inline-block;margin-bottom:6px}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--card2);color:var(--accent2);font-weight:600}
+  .box{border-radius:12px;padding:16px 18px;margin:16px 0}
+  .box.warn{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.4)}
+  .box.good{background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.35)}
+  .box.info{background:rgba(125,211,252,.07);border:1px solid rgba(125,211,252,.3)}
+  .box.purple{background:rgba(192,132,252,.08);border:1px solid rgba(192,132,252,.35)}
+  .box .ttl{font-weight:700;margin-bottom:4px}
+  .box.warn .ttl{color:var(--warn)}
+  .box.good .ttl{color:var(--good)}
+  .box.info .ttl{color:var(--accent2)}
+  .box.purple .ttl{color:var(--accent)}
+  .flow{background:#0b0e12;border:1px solid var(--line);border-radius:10px;
+    padding:14px 16px;font-family:"SF Mono",Menlo,monospace;font-size:12.5px;
+    color:var(--sub);overflow-x:auto;white-space:pre;line-height:1.5}
+  ul{margin:6px 0;padding-left:22px}
+  li{margin:4px 0}
+  .sub{color:var(--sub)}
+  .quote{border-left:3px solid var(--accent);padding:4px 14px;margin:14px 0;color:var(--sub);font-style:italic;background:rgba(192,132,252,.04)}
+  .step{display:flex;gap:12px;margin:10px 0;align-items:flex-start}
+  .step .num{flex:0 0 28px;height:28px;line-height:28px;text-align:center;
+    border-radius:50%;background:var(--accent);color:var(--bg);font-weight:700;font-size:13px}
+  .step .body{flex:1}
+  .step .body b{color:var(--accent2)}
+  .shots{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+  @media(max-width:720px){.shots{grid-template-columns:1fr}}
+  .shots figure{margin:0;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:10px;overflow:hidden}
+  .shots img{width:100%;height:auto;border-radius:8px;display:block;cursor:zoom-in}
+  .shots figcaption{color:var(--sub);font-size:12.5px;margin-top:8px;line-height:1.5}
+  .foot{margin-top:50px;padding-top:18px;border-top:1px solid var(--line);color:var(--sub);font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 0. ヘッダ -->
+  <div class="kicker">{{REPORT_KIND}}</div>
+  <h1>{{TITLE}}</h1>
+  <p class="lead">{{ONE_LINE_SUMMARY}}</p>
+  <div class="meta">
+    <span class="pill">📂 <b>{{PROJECT_NAME}}</b></span>
+    <span class="pill">📅 <b>{{DATE}}</b></span>
+  </div>
+
+  <!-- 1. Hero: 今すぐやること（省略不可） -->
+  <div class="hero">
+    <div class="ttl">⚡ 今すぐやること</div>
+    <div class="action">1. {{ACTION_1}}</div>
+    <p class="why">{{ACTION_1_WHY}}</p>
+  </div>
+
+  <!-- 2. なぜ今これか（省略不可・地の文 1〜2 段落） -->
+  <h2><span class="n">01</span>なぜ今これか</h2>
+  <p>{{CONTEXT_PARAGRAPHS}}</p>
+
+  <!-- 3. スクショギャラリー（画像が無ければセクションごと省略） -->
+  <h2><span class="n">02</span>本日のスクショ</h2>
+  <p>{{SHOTS_INTRO}}</p>
+  <div class="shots">
+    <figure>
+      <img src="data:image/png;base64,{{BASE64_1}}" alt="{{ALT_1}}">
+      <figcaption>{{CAPTION_1}}</figcaption>
+    </figure>
+  </div>
+
+  <!-- 4. 詳細・経緯（スキルごとの本文セクションをここに） -->
+  <h2><span class="n">03</span>{{DETAIL_SECTION_TITLE}}</h2>
+  <p>{{DETAIL_INTRO — 見出し直下に必ず 2〜4 文の地の文}}</p>
+
+  <!-- 5. フッタ -->
+  <div class="foot">
+    生成: {{SKILL_NAME}}<br>
+    日付: {{DATE}}
+  </div>
+
+</div>
+</body>
+</html>

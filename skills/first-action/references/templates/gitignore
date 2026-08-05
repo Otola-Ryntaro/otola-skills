@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+vendor/
+.venv/
+__pycache__/
+*.pyc
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build
+dist/
+build/
+.next/
+out/
+*.log
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*~
+
+# Test / Coverage
+coverage/
+.nyc_output/
+.pytest_cache/
+
+# Claude / AI
+.claude/cache/
+.aider*
+
+# Secrets
+*.pem
+*.key
+secrets/
