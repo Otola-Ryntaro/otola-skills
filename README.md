@@ -17,7 +17,7 @@ cp -R otola-skills/skills/<スキル名> ~/.claude/skills/
 
 一部のスキルは特定の環境（Codex CLI、oracle MCP、Playwright、Obsidian vault 等）を前提にしています。各 SKILL.md の前提セクションを確認してください。
 
-## スキル一覧（40 件）
+## スキル一覧（27 件）
 
 | スキル | 概要 |
 |--------|------|
@@ -47,19 +47,6 @@ cp -R otola-skills/skills/<スキル名> ~/.claude/skills/
 | [vpush](skills/vpush/) | 直前の作業内容からリリース内容を自動収集し、semverバンプ→リリースノート更新→タグ付きpushを一気通貫実行 |
 | [web-exam](skills/web-exam/) | Browser Use CLIベースのブラウザ総合検証。スクショ・コンソールエラー・性能・a11y・SEO・セキュリティを自動チェック |
 | [web-test](skills/web-test/) | Playwright CLIベースのブラウザ目視検証。操作ステップごとにスクショ・コンソールログ・ネットワークを記録 |
-| [wiki-absorb](skills/wiki-absorb/) | wiki-extractの抽出ノートを深さを保ったままwiki本体（concepts/opinions/entities）へ構造化統合する段階2 |
-| [wiki-clip](skills/wiki-clip/) | Obsidian Web Clipperで取り込んだWebページから使える知識だけを蒸留してwikiに統合 |
-| [wiki-common](skills/wiki-common/) | 単独では発動しない共有リファレンス置き場。confidence判定基準・frontmatter規約等を他のwiki-*スキルがRead参照 |
-| [wiki-dashboard](skills/wiki-dashboard/) | wiki全体を走査しドメイン別件数・confidence:low一覧・未解決の問い数を集計しmeta/dashboard.mdを更新 |
-| [wiki-essay](skills/wiki-essay/) | seed（意見の芽）から読者ペルソナ×論証切り口の多角度で長文コラムを執筆（write/reflect/handoff/rebuild-threadsの4モード） |
-| [wiki-extract](skills/wiki-extract/) | プロジェクトやvaultを網羅的に読み込み、深い抽出ノートをraw/staging配下に出力する2段階吸い出しの段階1 |
-| [wiki-help](skills/wiki-help/) | 状況に応じてどのwiki系スキルを使うべきか案内する道案内役（実際の処理は行わない） |
-| [wiki-interview](skills/wiki-interview/) | ユーザー自身の思考・違和感を対話インタビューで引き出し「育てる問い(seed)」として登録 |
-| [wiki-lint](skills/wiki-lint/) | wikiの矛盾・陳腐化・孤立ページ・リンク切れ・裏取り不足を検出し修復案を提案 |
-| [wiki-prospect](skills/wiki-prospect/) | 既存wiki知識を起点に手薄なドメイン・未解決の問いを検出し新しい知識を能動的に収集・拡張 |
-| [wiki-query](skills/wiki-query/) | wikiに質問し関連ページを引用付きで回答、再利用価値があればページとして還元 |
-| [wiki-visualize](skills/wiki-visualize/) | concept/opinionページやwiki-prospect成果物をダッシュボード風HTMLレポートに可視化 |
-| [wiki-weave](skills/wiki-weave/) | 孤立ノード（リンクの無いページ）を検出し意味的に関連する既存ページへ双方向リンクを追記 |
 | [zero-design](skills/zero-design/) | プロジェクトを「ゼロから再設計するなら」の視点で総合分析し、根拠付き改善レポートを生成（コード変更なし） |
 
 ## コマンド一覧（9 件）

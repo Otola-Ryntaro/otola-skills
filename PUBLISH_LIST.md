@@ -2,6 +2,8 @@
 
 供給元: `Evironment/Skill-library/`（一方向同期。更新は skill-publish スキルで行う）
 
+注: wiki 系スキル 13 件は 2026-08-06 に本リポから削除。大幅更新のうえ別リポ（Thriver）で公開予定。
+
 | 名前 | 供給元 | 最終同期日 | サニタイズ内容 |
 |------|--------|-----------|---------------|
 | claude-setup-check | Skill-library/global-skills/claude-setup-check | 2026-08-06 | なし |
@@ -31,19 +33,6 @@
 | vpush | Skill-library/global-skills/vpush | 2026-08-06 | なし |
 | web-exam | Skill-library/global-skills/web-exam | 2026-08-06 | なし |
 | web-test | Skill-library/global-skills/web-test | 2026-08-06 | なし |
-| wiki-absorb | Skill-library/global-skills/wiki-absorb | 2026-08-06 | なし |
-| wiki-clip | Skill-library/global-skills/wiki-clip | 2026-08-06 | なし |
-| wiki-common | Skill-library/global-skills/wiki-common | 2026-08-06 | なし |
-| wiki-dashboard | Skill-library/global-skills/wiki-dashboard | 2026-08-06 | なし |
-| wiki-essay | Skill-library/global-skills/wiki-essay | 2026-08-06 | なし |
-| wiki-extract | Skill-library/global-skills/wiki-extract | 2026-08-06 | なし |
-| wiki-help | Skill-library/global-skills/wiki-help | 2026-08-06 | なし |
-| wiki-interview | Skill-library/global-skills/wiki-interview | 2026-08-06 | なし |
-| wiki-lint | Skill-library/global-skills/wiki-lint | 2026-08-06 | なし |
-| wiki-prospect | Skill-library/global-skills/wiki-prospect | 2026-08-06 | なし |
-| wiki-query | Skill-library/global-skills/wiki-query | 2026-08-06 | なし |
-| wiki-visualize | Skill-library/global-skills/wiki-visualize | 2026-08-06 | なし |
-| wiki-weave | Skill-library/global-skills/wiki-weave | 2026-08-06 | なし |
 | zero-design | Skill-library/global-skills/zero-design | 2026-08-06 | なし |
 | cr (command) | Skill-library/global-commands/cr.md | 2026-08-06 | なし |
 | fakecheck (command) | Skill-library/global-commands/fakecheck.md | 2026-08-06 | なし |
