@@ -192,7 +192,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _serve_static(self, path):
         hub = HUB.resolve()
-        target = (hub / ("index.html" if path == "/" else path.lstrip("/"))).resolve()
+        target = (hub / ("index.html" if path == "/" else urllib.parse.unquote(path).lstrip("/"))).resolve()
         if not (target in [hub / f for f in STATIC_FILES]
                 or any(target.is_relative_to(hub / d) for d in STATIC_DIRS)):
             return self._send(403, {"error": "forbidden"})

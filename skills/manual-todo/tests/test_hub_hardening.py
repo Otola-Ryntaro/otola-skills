@@ -72,6 +72,13 @@ class HubServerTest(unittest.TestCase):
         for path in ("/state/registry.json", "/chrome-profile/Cookies", "/../todo-other/secret.html"):
             self.assertEqual(self.get(path).status, 403, path)
 
+    def test_encoded_japanese_name_is_served(self):
+        (self.hub_dir / "heroes" / "日本語.png").write_text("x", encoding="utf-8")
+        self.assertEqual(self.get("/heroes/%E6%97%A5%E6%9C%AC%E8%AA%9E.png").status, 200)
+
+    def test_encoded_traversal_is_refused(self):
+        self.assertEqual(self.get("/pages/%2e%2e/state/registry.json").status, 403)
+
     def test_report_runs_in_sandbox(self):
         res = self.get(f"/file?path={self.report}")
         self.assertEqual(res.status, 200)
