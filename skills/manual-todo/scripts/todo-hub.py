@@ -36,6 +36,11 @@ REGISTRY = STATE / "registry.json"
 REPORTS = STATE / "reports.json"
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
 JST = timezone(timedelta(hours=9))
+# 配信するのはハブの画面だけ。state や chrome-profile など配下の他のファイルは出さない
+STATIC_FILES = ("index.html", "reports.html")
+STATIC_DIRS = ("pages", "heroes")
+# 取り込んだレポートは信用できないので、ハブとは別オリジン扱いにして API を呼ばせない
+REPORT_CSP = "sandbox allow-scripts allow-popups"
 
 
 def ensure_dirs():
@@ -104,7 +109,7 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass  # 静かに
 
-    def _send(self, code, body, ctype="application/json; charset=utf-8"):
+    def _send(self, code, body, ctype="application/json; charset=utf-8", csp=""):
         if isinstance(body, (dict, list)):
             body = json.dumps(body, ensure_ascii=False).encode("utf-8")
         elif isinstance(body, str):
@@ -120,6 +125,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
             self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        if csp:
+            self.send_header("Content-Security-Policy", csp)
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
@@ -164,11 +171,11 @@ class Handler(BaseHTTPRequestHandler):
             target = qs.get("path", [""])[0]
             tp = Path(target).resolve()
             allowed = {str(Path(e["path"]).resolve()) for e in load_reports()["reports"]}
-            if str(tp) not in allowed:
+            if str(tp) not in allowed or tp.suffix != ".html":
                 return self._send(403, {"error": "not registered"})
             if not tp.is_file():
                 return self._send(404, {"error": "not found"})
-            return self._send(200, tp.read_bytes(), "text/html; charset=utf-8")
+            return self._send(200, tp.read_bytes(), "text/html; charset=utf-8", csp=REPORT_CSP)
         # VS Code でファイルを開く（manual-todo ページの「VS Code で開く」ボタン用）。
         # 任意コマンド実行を防ぐため、登録済み projectPath 配下＋ハブ配下のみ許可
         if path == "/api/vscode":
@@ -184,13 +191,11 @@ class Handler(BaseHTTPRequestHandler):
         return self._serve_static(path)
 
     def _serve_static(self, path):
-        if path == "/":
-            target = HUB / "index.html"
-        else:
-            rel = path.lstrip("/")
-            target = (HUB / rel).resolve()
-            if not str(target).startswith(str(HUB.resolve())):
-                return self._send(403, {"error": "forbidden"})
+        hub = HUB.resolve()
+        target = (hub / ("index.html" if path == "/" else path.lstrip("/"))).resolve()
+        if not (target in [hub / f for f in STATIC_FILES]
+                or any(target.is_relative_to(hub / d) for d in STATIC_DIRS)):
+            return self._send(403, {"error": "forbidden"})
         if not target.is_file():
             return self._send(404, {"error": "not found"})
         ctypes = {".html": "text/html; charset=utf-8", ".png": "image/png",
@@ -500,6 +505,15 @@ def cmd_report_add(args):
     cmd_reindex(args)
 
 
+def scan_candidates(root, patterns):
+    """root の外を指すシンボリックリンクを除いて、レポート候補を返す"""
+    base = root.resolve()
+    for pattern in patterns:
+        for f in sorted(root.glob(pattern)):
+            if f.resolve().is_relative_to(base):
+                yield f
+
+
 def cmd_report_scan(args):
     ensure_dirs()
     # --root 指定時はそこだけ、省略時は ~/claude code と ~/dev の両方を走査
@@ -518,11 +532,10 @@ def cmd_report_scan(args):
                   "*/work/source-explainer/*/06-private-visualization.html",
                   "*/USER_GUIDE/visualize/*_user_guide.html")
     for root in roots:
-        for pattern in scan_globs:
-            for f in sorted(root.glob(pattern)):
-                if str(f.resolve()) not in known:
-                    reports["reports"].append(report_entry_from_path(f))
-                    added += 1
+        for f in scan_candidates(root, scan_globs):
+            if str(f.resolve()) not in known:
+                reports["reports"].append(report_entry_from_path(f))
+                added += 1
     save_reports_and_regen(reports)
     print(f"report-scan 完了: 追加 {added} / 削除 {pruned} / 合計 {len(reports['reports'])}")
     cmd_reindex(args)

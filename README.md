@@ -100,6 +100,7 @@ cp -R otola-skills/codex-skills/<スキル名> ~/.codex/skills/
 - `goal-feed` 系を Orca 前提に更新し、待機方法を `orca-protocol.md` に統一した
 - `/cr --codex` と `--adversarial` の実行方法を `codex exec review` に変更した
 - `manual-todo` のハブで、VS Code を開く API を POST 限定にして、他サイトから起動できないようにした
+- `manual-todo` のハブの配信範囲を画面に必要なファイルだけに絞り、取り込んだレポートをサンドボックスで表示するようにした
 - `web-exam`、`web-test` は localhost が応答しないとき、本番へ切り替えずユーザーに確認するようにした
 - `mine-check` を公開から外し、`project-audit`、`project-setup` の同名コマンドを削除した（スキルは引き続き利用可能）
 - 特定プロジェクトの固有情報を除き、`web-exam`、`web-test` の `references/flows.md` を雛形にした
