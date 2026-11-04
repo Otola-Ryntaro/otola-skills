@@ -1,0 +1,107 @@
+/* where: ~/.claude/skills/manual-todo/assets/kanban-theme.css（正本。scripts/apply-theme.py が各ページの body 終了タグ直前へ差し込む）
+   what : manual-todo ページ（template.html 由来）を kargulstudio/kanban 風の見た目に上書きするテーマ
+   why  : 既存ページの <style> は 12 系統に分かれているため書き換えず、共通の変数名・クラス名を後勝ちで上書きする。
+          body 末尾に後付けアドオンの <style> があるページもあるので、詳細度を 1 段上げて確実に勝たせる */
+:root {
+  --bg: #ffffff; --panel: #ffffff; --panel-2: #fafafa; --card: #ffffff;
+  --border: #ededed; --card-border: #e7e7e9;
+  --text: #121212; --text-dim: #757575; --text-mute: #a1a1a1; --icon: #aaaaaa;
+  --accent: #0d5fea; --accent-dim: #e7effd;
+  --success: #47ba39; --success-dim: #e9f7e7; --warning: #ff6e00; --danger: #ef1111;
+  --done: #a1a1a1; --primary: #121212;
+  --shadow: 0 2px 4px 0 rgb(35 35 35 / .03), 0 1px 2px 0 rgb(35 35 35 / .04), 0 0 0 3px rgb(205 205 205 / .12);
+  --shadow-control: 0 1px 2px 0 rgb(0 0 0 / .08), 0 0 0 1px #ededed;
+  --shadow-lift: 0 0 0 1px rgb(37 117 255 / .24), 0 0 0 4px rgb(37 117 255 / .16), 0 2px 12px 0 rgb(35 35 35 / .08);
+  --shadow-popover: 0 0 0 1px #ededed, 0 4px 12px rgb(0 0 0 / .06), 0 12px 32px rgb(0 0 0 / .08);
+  --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+/* 日本語本文のため kanban の line-height 130% より広げ、ヒラギノが W6 に化けないよう本文は 400 */
+html, body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--font-sans); font-size: 14px; font-weight: 400;
+  line-height: 1.6; letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+html body header { background: var(--panel); border-bottom: 1px solid var(--border); box-shadow: none; }
+html body header .project-tag {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 500;
+  color: var(--text-dim); letter-spacing: 0; text-transform: none;
+}
+html body header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
+html body header .subtitle { color: var(--text-dim); font-size: 13px; }
+
+/* 進捗バー */
+html body .progress-bar { height: 4px; background: #f0f0f0; border-radius: 999px; }
+html body .progress-fill { background: var(--accent); border-radius: 999px; }
+html body .progress-text { font-family: var(--font-mono); font-size: 12px; color: var(--text-mute); }
+html body .progress-text strong { color: var(--text); font-weight: 500; }
+
+/* ステージ = kanban のカード */
+html body .stage { border: none; border-radius: 16px; box-shadow: var(--shadow); margin-bottom: 20px; overflow: hidden; }
+html body .stage-title {
+  background: var(--panel); border-bottom: 1px solid var(--card-border);
+  font-size: 14px; font-weight: 600; letter-spacing: -0.02em; gap: 10px; padding: 14px 18px;
+}
+html body .stage-num {
+  width: 18px; height: 18px; border-radius: 5px;
+  background: var(--primary); color: #fff;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+  box-shadow: 0 1px 2px 0 rgb(9 9 11 / .08), inset 0 1px 20px 0 rgb(255 255 255 / .16);
+}
+html body .stage-progress {
+  background: none; border: none; padding: 0; border-radius: 0;
+  font-family: var(--font-mono); font-size: 12px; color: var(--text-mute);
+}
+html body .stage-progress.complete { color: var(--success); }
+html body .stage-desc { color: var(--text-dim); }
+
+/* タスク行 */
+html body .task { border-bottom: 1px solid var(--card-border); }
+html body .task:hover { background: var(--panel-2); }
+html body .task-title { font-weight: 500; }
+html body .task input[type="checkbox"] {
+  width: 16px; height: 16px; border: 1.5px solid #d4d4d4; border-radius: 5px; background: var(--panel);
+}
+html body .task input[type="checkbox"]:hover { border-color: var(--text-mute); }
+html body .task input[type="checkbox"]:checked { background: var(--success); border-color: var(--success); }
+html body .task input[type="checkbox"]:checked::after { left: 4px; top: 0; width: 4px; height: 9px; border-color: #fff; }
+html body .task.done .task-title { color: var(--text-mute); }
+html body .task-desc, html body .task-why, html body .task-after { color: var(--text-dim); }
+html body .task-why::before, html body .task-after::before { color: var(--text-dim); font-weight: 600; }
+html body .task-link { color: var(--accent); border-bottom: none; padding-bottom: 0; }
+html body .task-link:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+html body .task-meta { color: var(--text-mute); }
+html body .task-cmd, html body .task-fields {
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px;
+}
+html body .task-cmd, html body .task-fields dd { font-family: var(--font-mono); }
+html body .task-shot { background: var(--panel-2); border-color: var(--border); border-radius: 12px; }
+
+/* ボタン類 = kanban の control */
+html body .back-to-hub, html body .hub-link, html body .sync-status,
+html body .link-copy, html body .task-vscode, html body .task-cmd-copy, html body #reset-btn {
+  background: var(--panel); color: var(--text-dim); border: none; border-radius: 8px;
+  box-shadow: var(--shadow-control); font-family: var(--font-sans); font-weight: 500;
+}
+html body .back-to-hub:hover, html body .hub-link:hover, html body .link-copy:hover,
+html body .task-vscode:hover, html body .task-cmd-copy:hover {
+  background: var(--panel-2); color: var(--text); border: none;
+}
+html body .task-vscode { color: var(--text); }
+html body .sync-status.on { color: var(--success); border: none; }
+html body .task-cmd-copy.copied { color: var(--success); border: none; }
+html body #reset-btn:hover { color: var(--danger); background: var(--panel-2); border: none; }
+
+/* いまやること = 持ち上げたカード */
+html body .hero-card { background: var(--panel); border: none; border-radius: 16px; box-shadow: var(--shadow-lift); }
+html body .hero-card .hero-label {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 500;
+  color: var(--accent); letter-spacing: 0; text-transform: none;
+}
+html body .hero-card .hero-task { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
+html body .hero-card .hero-stage { color: var(--text-dim); }
+
+html body footer { color: var(--text-mute); }
+html body .celebration { border: none; border-radius: 16px; box-shadow: var(--shadow-popover); }
+html body .celebration h2 { color: var(--success); font-weight: 600; }

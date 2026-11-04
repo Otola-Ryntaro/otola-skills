@@ -12,34 +12,15 @@ Codex と CC で並行に plan を立て、いいとこ取りで最終プラン�
 
 `EnterPlanMode` を必ず呼ぶ。ユーザーの明示ルール。ここから Phase D で `ExitPlanMode` するまで、plan file と会話上の草案以外は書き出さない。
 
-### A-2. agmsg identity 確認
+### A-2. Orca の前提チェックと SLUG の確定
 
-```bash
-~/.agents/skills/agmsg/scripts/whoami.sh "$(pwd)" claude-code
-```
+`orca-protocol.md` の 1〜2 節で前提と配置を確かめる。続けて A-5 の手順で `SLUG` を確定する（worktree 名と agmsg の名前に使うため、A-3 より先に決める）。
 
-分岐:
+### A-3. worktree・agmsg・Codex の準備
 
-- **Single identity**: `agent=<name> teams=<t1,...>` — そのまま `AGENT` / `TEAMS` を握って A-3 へ。
-- **Multiple identities**: `AskUserQuestion` でどの agent 名で振る舞うか確認。
-- **Not joined**: ユーザーに join を促す。ここで skill を一時中断し、`/agmsg` の join フローを案内。完了したら本 skill を再開する。
-- **Suggest**: 過去に別 project で使った候補名を提示、reuse するか新規かを確認。
+`orca-protocol.md` の 3〜5 節に従い、worktree を作り、`<slug>-cc`・`<slug>-codex` を登録し、Codex を起動する。orca-master 配下なら既に揃っているので、渡された値を state に記録するだけでよい。
 
-### A-3. Codex peer 解決
-
-各 TEAM について:
-
-```bash
-~/.agents/skills/agmsg/scripts/team.sh <TEAM>
-```
-
-出力から `type=codex` のメンバーを列挙:
-
-- **1 名**: 自動採用 → `CODEX_PEER=<name>`
-- **複数**: `AskUserQuestion` で「今回の相方はどの Codex にする？」を選択
-- **0 名**: ユーザーに「Codex 側で `/agmsg spawn codex <name>` するか、既存 Codex セッションに `/agmsg actas <name>` で参加してもらってください」と案内。到着まで待つ or 中断。
-
-セッション内で `CODEX_PEER` を固定（同一セッション中は問い直さない）。
+以後 `AGENT=<slug>-cc`、`CODEX_PEER=<slug>-codex` に固定する。
 
 ### A-4. paid-service quality bar の握り込み
 
@@ -71,7 +52,7 @@ Codex と CC で並行に plan を立て、いいとこ取りで最終プラン�
 Body には以下を含める:
 - 対象（repo / 現ブランチ / CWD）
 - 入力（source report path / 依頼概要 / 修正依頼なら現象と再現条件）
-- CC 側の初期方針の要約（短く 5〜8 行）
+- CC 側の初期方針の要約（Codex が独立に検討できる範囲で短く）
 - 観点（有料品質、本質修正、受け入れ条件、テスト方針、セキュリティ / データ、ticket-gen 粒度）
 - 締め: 「Codex 側でも独立した plan report を作成し `goal-feed plan report from codex` の subject で返信してください」
 
@@ -107,10 +88,9 @@ plan mode 中は Write を控え、会話中に以下の構成でドラフトを
 
 ### B-4. Codex report 到着待ち
 
-`~/.agents/skills/agmsg/scripts/inbox.sh $TEAM $AGENT` で能動チェック、または agmsg monitor が push する。Subject `goal-feed plan report from codex` を待つ。
+`orca-protocol.md` 7 節の待機で受ける。Subject `goal-feed plan report from codex` を待つ。
 
-- 3 分ごとにチェック（Bash で軽く sleep）— 大きな計算を挟まないなら自然に turn 単位で確認される。
-- 10 分経過しても到着しない場合はユーザーに続行判断を仰ぐ。続行時: CC report のみで plan 化し、事後承認ルートに切り替え。
+- 届かないときは SKILL.md の S-2 に従う。3 連続停滞でユーザーに続行判断を仰ぐ。続行時: CC report のみで plan 化し、事後承認ルートに切り替え。
 
 ---
 
@@ -243,9 +223,7 @@ cc_report_path: codex/plans/${DATE_YYYYMMDD}_${SLUG}_cc_report.md
 
 | 症状 | 想定原因 | 対応 |
 |------|----------|------|
-| whoami.sh が `not_joined` | この project で未 join | `/agmsg` の join フローへ誘導 |
-| team.sh で codex が見えない | Codex 側が join していない / spawn していない | ユーザー経由で Codex 側の join を依頼 |
-| Codex report 未着（10 分超） | Codex 側が忙しい / エラー | 続行判断を仰ぐ。CC 単独で plan 化 + 事後 Codex 承認ルート |
+| Codex report 未着（3 連続停滞） | Codex 側のエラー | 続行判断を仰ぐ。CC 単独で plan 化 + 事後 Codex 承認ルート |
 | plan file 上書き警告 | 同日同 SLUG で以前作成済み | `_v2` サフィックスまたは新 SLUG |
 | 有料品質項目に迷い | ユーザー要件不明 | `references/paid-service-quality-bar.md` の該当節を提示し `AskUserQuestion` で個別確認 |
 | Phase B で Codex 側が strong opinion で押してきた | 対称的レビュー健全 | 内容で判断、Root-cause / User value の観点で軍配。譲れないところは reason を明記して agmsg 返信 |

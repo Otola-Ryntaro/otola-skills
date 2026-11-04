@@ -212,3 +212,13 @@ Phase構成テーブルがない ticket_index.md の場合は、チケット一�
 - ticket_index.md 自体はチケットとして扱わない（管理ファイル）
 - レポートファイル（`phase1_recon.md` 等）もチケットとして扱わない
 - チケットかどうかは `- [ ]` / `- [x]` の存在で判断する
+
+---
+
+## スクショ保存の推奨（UI 変更を含む Phase）
+
+Phase 完了報告時、その Phase に UI 変更（画面表示・スタイル・フロントエンド）が含まれる場合は、
+実画面のスクリーンショットを `output/` 配下（例: `output/playwright/YYYYMMDD_<desc>/NNN_<step>.png` または
+`output/goal-feed/YYYYMMDD_phase<N>/NNN_<desc>.png`）へ保存することを推奨する。
+ここに保存しておくと、セッション終了時の `/shime --visualize` が「本日のスクショ」ギャラリーとして自動収集し、
+日報 HTML で変化を画像で確認できるようになる。

@@ -29,7 +29,7 @@ Playwright CLI (`playwright-cli`) を使用した目視検証。
 curl -s -o /dev/null -w "%{http_code}" http://localhost:3000
 ```
 - 200系 → `http://localhost:3000`（ローカル）
-- それ以外 → `https://app.meocli.com`（本番）
+- それ以外 → 検証先の URL をユーザーに確認する（本番へ自動で切り替えない）
 - 報告: `環境: local / production`
 
 ### Phase 2: ブラウザ起動
@@ -108,15 +108,15 @@ output/playwright/YYYYMMDD_<description>/
 
 ## 認証ハンドリング
 
-### 患者フロー（認証なし）
-`/s/{slug}` からアクセス → そのままフロー実行
+### 公開フロー（認証なし）
+公開 URL からアクセス → そのままフロー実行
 
-### 管理画面（Supabase Auth）
+### 管理画面（ログインあり）
 ```
 管理画面へのログインが必要です。
 1. メールアドレス
 2. パスワード
-3. テスト用クリニックのslug (あれば)
+3. テスト用データの識別子 (あれば)
 ```
 
 ### プラットフォーム管理（MFA 必須）

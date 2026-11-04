@@ -175,7 +175,7 @@ LP のメインビジュアル下や About ページに使える長さ。
 
 > 本レポートの衝突確認は WebSearch による **簡易スクリーニング** です。
 > 商標登録の可否や法的衝突については、J-PlatPat（日本）/ USPTO（米国）等での正式な商標検索、および弁理士による調査が必要です。
-> ドメインの取得可否は、お使いのレジストラ（Cloudflare Registrar / お名前.com / Google Domains 等）で whois 確認してください。
+> ドメインの取得可否は、お使いのレジストラ（Cloudflare Registrar / お名前.com 等）で whois 確認してください。
 > このレポートは「採用してよさそうか」を判断するための初期評価です。正式採用前には専門家確認を推奨します。
 
 ---
@@ -196,7 +196,7 @@ LP のメインビジュアル下や About ページに使える長さ。
 
 採用が決まった後にやるべきこと:
 
-- [ ] **ドメイン取得**: `{{name}}.com` などを Cloudflare Registrar / お名前.com / Google Domains で whois 確認 → 取得
+- [ ] **ドメイン取得**: `{{name}}.com` などを Cloudflare Registrar / お名前.com で whois 確認 → 取得
 - [ ] **SNS ハンドル確保**: X / Instagram / GitHub / YouTube などで `@{{name}}` が空いているか確認 → 即時確保
 - [ ] **商標調査**: J-PlatPat（日本）や USPTO（米国）で正式に商標衝突がないか確認
 - [ ] **商標出願検討**: 事業規模・収益化計画に応じて出願を検討（弁理士相談推奨）

@@ -10,6 +10,8 @@
 
 {{一文でこのプロジェクトが何か}}
 
+**大ゴール**: {{商用化レベルの最終到達点を一文で。詳細は `USER_GUIDE/ROADMAP.md`、進捗は `docs/MILESTONES.md`}}
+
 ## 2. 解決したい課題
 
 - **誰の**: {{ターゲットユーザー}}
@@ -61,7 +63,7 @@
 
 ### Disable 候補（コンテキスト最適化）
 
-グローバル有効だが本プロジェクトで使わない MCP を `.claude/settings.local.json` の `disabledMcpjsonServers` に登録する。詳細は first-action skill の [context-hygiene.md](../.claude/skills/first-action/references/context-hygiene.md) 参照。
+グローバル有効だが本プロジェクトで使わない MCP を `.claude/settings.local.json` の `disabledMcpjsonServers` に登録する。詳細は `~/.claude/skills/first-action/references/context-hygiene.md` 参照。
 
 | 名前 | 種別 | Disable 理由 |
 |---|---|---|
@@ -83,5 +85,5 @@
 ## 9. 次のアクション
 
 - [ ] Phase 5: `/ticket-gen` でチケット分割
-- [ ] Phase 6: `/codex:adversarial-review` で外部レビュー
+- [ ] Phase 6: `codex-second-opinion` で外部レビュー
 - [ ] Phase 7: `/ko` で実装開始

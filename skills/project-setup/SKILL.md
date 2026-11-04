@@ -15,7 +15,7 @@ description: >
 ## 概要
 
 `/project-audit` で生成された監査レポート（`.claude-audit/audit-report.md`）を読み取り、
-スコアが **6 以下**（C/D ランク）のカテゴリに対して設定ファイルの生成・改善を行う。
+スコアが **6 以下**（B/C/D ランク）のカテゴリに対して設定ファイルの生成・改善を行う。
 
 **必ずユーザー確認後に変更を実行する。既存ファイルは上書きしない（マージ/追記のみ）。**
 
@@ -23,7 +23,7 @@ description: >
 
 ```
 /project-setup <プロジェクトパス>
-/project-setup ~/claude\ code/kuchikomi_maker
+/project-setup ~/projects/my-app
 ```
 
 引数なしの場合はユーザーにパスを尋ねる。
@@ -79,8 +79,7 @@ audit-report.md のスコアサマリーテーブルを解析し、**スコア 6
 （package.json から自動検出して記載）
 
 ## 注意事項
-- 変更前に関連ファイルを読み切る
-- セキュリティに関わる変更は必ず確認する
+（コードと既存ドキュメントから、このプロジェクト固有の落とし穴を記載。見つからなければ節ごと省く）
 ```
 
 ---
@@ -126,10 +125,9 @@ audit-report.md のスコアサマリーテーブルを解析し、**スコア 6
 INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 if echo "$COMMAND" | grep -qE 'rm -rf|git push --force|git reset --hard|DROP TABLE|TRUNCATE'; then
-  echo '{"decision":"block","reason":"Dangerous command blocked by hook"}'
-else
-  echo '{"decision":"approve"}'
+  echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Dangerous command blocked by hook"}}'
 fi
+exit 0
 ```
 
 `auto-format.sh`:
@@ -186,20 +184,14 @@ $ARGUMENTS のテストを作成してください。
 
 **カテゴリ 5: Git ワークフロー（スコア <=6 の場合）**
 
-対象: `<target>/.claudeignore`, `<target>/.gitignore`
+対象: `<target>/.claude/settings.json`, `<target>/.gitignore`
 
 アクション:
-- .claudeignore が存在しない → 新規作成
-  ```
-  node_modules/
-  .next/
-  .git/
-  dist/
-  build/
-  coverage/
-  *.log
-  test-results/
-  playwright-report/
+- `permissions.deny` に生成物の読み取り除外がない → 既存エントリを残してマージで追記
+  ```json
+  "Read(./node_modules/**)", "Read(./.next/**)", "Read(./dist/**)",
+  "Read(./build/**)", "Read(./coverage/**)", "Read(./test-results/**)",
+  "Read(./playwright-report/**)"
   ```
 - .gitignore に .env 系の除外がない → 追記
 

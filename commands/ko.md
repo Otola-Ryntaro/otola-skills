@@ -110,8 +110,7 @@ TodoWrite でタスクをサブタスクに分解する。各サブタスクは�
 #### 3-strict. Strict モード時の追加レビュー（通常レビューの前）
 
 strict モード対象のチケットでは、通常のコードレビュー（下記の優先順位）に入る前に
-以下を **必ず** 実行する。superpowers の subagent-driven-development が持つ
-「self-review + spec compliance review」の本質を取り込んだ軽量実装。
+以下を **必ず** 実行する。
 
 1. **Self-review**: 直前の diff を Claude 自身で観点別に確認:
    - **Completeness**: 受け入れ条件を全て満たしたか（`-strict` で TodoWrite に展開した条件と照合）

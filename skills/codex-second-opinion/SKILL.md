@@ -16,7 +16,7 @@ OpenAI Codex CLI を活用したセカンドオピニオン取得スキル。
 | 呼び出し方法 | 起動するサーバー | 評価 |
 | ------------ | ---------------- | ---- |
 | `codex exec review`（Bash） | なし（単発） | ✅ デフォルト推奨 |
-| `SlashCommand(/codex:review)` | `codex app-server` 常駐 | △ リッチUI/BG管理が要るとき |
+| ユーザーが `/codex:review` を入力 | `codex app-server` 常駐 | △ リッチUI/BG管理が要るとき |
 | `mcp__codex-cli__review` | `codex-mcp-server` 常駐 | △ MCP前提のとき |
 | `Skill(skill: "codex:review")` | — | ❌ 動かない（プラグインコマンドであり Skill ではない） |
 
@@ -25,7 +25,7 @@ OpenAI Codex CLI を活用したセカンドオピニオン取得スキル。
 | 優先度 | 方式 | 呼び出し | 使い分け |
 | ------ | ---- | -------- | -------- |
 | 1 | **CLI 直接（推奨・デフォルト）** | `codex exec review` via Bash | 通常のレビュー全般。常駐サーバーを残さず最も安定 |
-| 2 | **プラグインコマンド** | `SlashCommand` で `/codex:review` / `/codex:adversarial-review` | バックグラウンドジョブ管理（`/codex:status` 等）やリッチな対話UIが欲しいとき |
+| 2 | **プラグインコマンド** | モデルからは呼べない。ユーザーに `/codex:review` / `/codex:adversarial-review` の入力を依頼する | バックグラウンドジョブ管理（`/codex:status` 等）やリッチな対話UIが欲しいとき |
 | 3 | **MCP ツール** | `mcp__codex-cli__review`, `mcp__codex-cli__codex` | 既に MCP ワークフローに組み込んでいるとき |
 
 ## Pattern 1: CLI 直接（推奨・デフォルト）
@@ -104,11 +104,11 @@ cat /tmp/claude/result.json
 バックグラウンドジョブ管理やリッチな対話UIが必要な場合のみ使用。内部で `codex app-server` に委譲するため、多用するとプロセスが蓄積する点に注意。
 
 ```
-SlashCommand: /codex:review --wait --scope working-tree
-SlashCommand: /codex:adversarial-review --wait --scope working-tree セキュリティに注目
-SlashCommand: /codex:status     # バックグラウンドジョブの進捗
-SlashCommand: /codex:result     # 最新結果の取得
-SlashCommand: /codex:cancel     # 実行中レビューのキャンセル
+/codex:review --wait --scope working-tree
+/codex:adversarial-review --wait --scope working-tree セキュリティに注目
+/codex:status     # バックグラウンドジョブの進捗
+/codex:result     # 最新結果の取得
+/codex:cancel     # 実行中レビューのキャンセル
 ```
 
 - `--wait`: フォアグラウンド実行 / `--background`: バックグラウンド実行
@@ -142,7 +142,6 @@ Parameters:
 ```
 /cr --codex          → codex exec review（CLI 直接・デフォルト）
 /cr --adversarial    → codex exec review + adversarial プロンプト
-/cr --codex-plugin   → /codex:review（プラグインコマンド）
 /cr --codex-mcp      → mcp__codex-cli__review（MCP 直接）
 ```
 
@@ -187,7 +186,6 @@ grep -n "model" ./.codex/config.toml ~/.codex/config.toml 2>/dev/null
 
 - 恒久対処: 該当行を `model = "gpt-5.5"` などサポート中のモデルに書き換える
 - 一時対処: `codex exec review -m gpt-5.5 ...` とモデルを明示する
-- 2026-07-28: `Evironment/.codex/config.toml` の同件を `gpt-5.5` へ修正済み
 
 ### 症状: `Auth(TokenRefreshFailed("invalid_grant: ..."))` が出る
 
@@ -212,7 +210,7 @@ ls ~/.claude/plugins/cache/openai-codex/codex/*/commands/ 2>/dev/null
 
 ## Limitations
 
-- Codex は OpenAI モデル（gpt-5.6-sol / gpt-5.5 等、`config.toml` の `model` 設定に従う）を使用し、Claude ではない
+- Codex は `config.toml` の `model` 設定に従う OpenAI モデルを使用し、Claude ではない
 - インターネット接続と ChatGPT Plus/Pro/Business/Enterprise サブスクリプションが必要
 - Homebrew 版は古い。必ず npm 版（`@openai/codex`）を使用すること
-- 確認済みバージョン: `codex-cli 0.145.0`（npm 最新と一致、2026-07 時点）。更新は `npm install -g @openai/codex@latest`
+- バージョンは `codex --version` と `npm view @openai/codex version` でその都度確認する。更新は `npm install -g @openai/codex@latest`

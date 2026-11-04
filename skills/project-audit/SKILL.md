@@ -3,10 +3,11 @@ name: project-audit
 description: >
   指定プロジェクトが Claude Code ベストプラクティスに沿っているかを外部から評価し、
   対象プロジェクト内の .claude-audit/ にスコア付きレポートと評価基準ドキュメントを出力する。
+  再監査時は前回スコアとの差分も表示する。後続の /project-setup で低スコア項目を自動改善できる。
   発動条件:
   (1) /project-audit <パス> コマンド
-  (2) 「プロジェクト評価」「ベストプラクティス監査」「audit」等のキーワード
-  (3) 他プロジェクトの Claude Code 設定品質を確認したいとき
+  (2) 「プロジェクト評価」「ベストプラクティス監査」「audit」「設定品質チェック」「再監査」等のキーワード
+  (3) 他プロジェクトの Claude Code 設定品質を確認・定点観測したいとき
 ---
 
 # Project Audit — Claude Code ベストプラクティス適合評価
@@ -18,11 +19,14 @@ Claude Code ベストプラクティスへの適合度をスコア付きレポ�
 
 **対象プロジェクトの既存ファイルは変更しない。** `.claude-audit/` フォルダ作成と `.gitignore` 追記のみ行う。
 
+自プロジェクト（カレントディレクトリ）の `.claude` 構成診断には `claude-setup-check` を使う。
+本スキルは**外部プロジェクトの横断評価・定点観測**が主用途。
+
 ## 起動方法
 
 ```
 /project-audit <プロジェクトパス>
-/project-audit ~/claude\ code/kuchikomi_maker
+/project-audit ~/projects/my-app
 ```
 
 引数なしの場合はユーザーにパスを尋ねる。
@@ -36,6 +40,8 @@ Claude Code ベストプラクティスへの適合度をスコア付きレポ�
 ```
 
 **まずこのファイルを Read で読み込み、評価基準を把握してから調査を開始すること。**
+ファイルが存在しない場合は作業を止め、ユーザーに場所を確認する（内蔵知識だけで採点しない。
+評価基準がレポートに同梱できないと project-setup 連携が壊れるため）。
 
 ---
 
@@ -45,12 +51,17 @@ Claude Code ベストプラクティスへの適合度をスコア付きレポ�
 
 1. `$ARGUMENTS` からプロジェクトパスを取得（なければユーザーに質問）
 2. プロジェクトルートが存在することを確認
-3. 評価基準ドキュメント `~/claude code/Evironment/Claude_Codeベストプラクティス指示書.md` を Read で読み込む
+3. `date +%Y-%m-%d` で今日の日付を取得する（評価日欄に使う。記憶や推測で書かない）
+4. 評価基準ドキュメントを Read で読み込む
+5. `<target>/.claude-audit/audit-report.md` が既にあれば **再監査モード**:
+   前回のスコアサマリーを読み取って控え、前回レポートを
+   `audit-report_<前回の評価日>.md` にリネームして保管する
 
 ### Step 1: .claude-audit/ インフラ構築
 
-1. `mkdir -p <target>/.claude-audit/`
+1. `mkdir -p "<target>/.claude-audit/"`
 2. 評価基準ドキュメントの内容を `<target>/.claude-audit/best-practices.md` に Write でコピー
+   （既に同内容があればスキップ可）
 3. `<target>/.gitignore` を確認し、`.claude-audit/` が含まれていなければ末尾に追記:
    ```
    # Claude Code Audit (auto-generated)
@@ -60,25 +71,30 @@ Claude Code ベストプラクティスへの適合度をスコア付きレポ�
 
 ### Step 2: ファイル構成の収集（並列実行）
 
-以下を **すべて並列** で実行し、プロジェクトの現状を把握する:
+以下を **すべて並列** で実行し、プロジェクトの現状を把握する。
+パスに空白が含まれることが多いので、Bash では必ずダブルクォートし、`cd` ではなく `git -C` を使う。
 
 | 調査対象 | コマンド/ツール | 取得する情報 |
 |---------|---------------|-------------|
-| CLAUDE.md | Read `<target>/CLAUDE.md` | 内容・行数・構成 |
+| CLAUDE.md | Read `<target>/CLAUDE.md`、`<target>/.claude/CLAUDE.md`、`<target>/AGENTS.md` | 内容・行数・構成 |
+| CLAUDE.local.md | Read `<target>/CLAUDE.local.md` | ローカル指示（あれば） |
 | settings.json | Read `<target>/.claude/settings.json` | permissions・hooks |
-| settings.local.json | Read `<target>/.claude/settings.local.json` | ローカル設定 |
-| .claudeignore | Read `<target>/.claudeignore` | 除外パターン |
+| settings.local.json | Read `<target>/.claude/settings.local.json` | ローカル設定・hooks |
+| rules | Glob `<target>/.claude/rules/**/*.md` | 分割ルールファイル |
+| .claudeignore | Glob `<target>/.claudeignore` | 残っていれば無効な設定として指摘し、`permissions.deny` の Read ルールへの移行を提案（Claude Code はこのファイルを読まない） |
 | .gitignore | Read `<target>/.gitignore` | シークレット除外確認 |
 | .mcp.json | Read `<target>/.mcp.json` | MCP サーバー設定 |
 | カスタムコマンド | Glob `<target>/.claude/commands/**/*.md` | コマンド一覧 |
 | サブエージェント | Glob `<target>/.claude/agents/**/*.md` + `<target>/.agents/**/*.md` | エージェント一覧 |
 | スキル | Glob `<target>/.claude/skills/**/*.md` | スキル一覧 |
-| Hooks | settings.json 内の hooks セクション | Hook 設定 |
 | package.json | Read `<target>/package.json` | スクリプト・依存関係 |
 | テスト設定 | Glob `<target>/**/*.test.*` + `<target>/**/*.spec.*` (head 20) | テストファイル数 |
 | .env 系 | Glob `<target>/.env*` | 環境変数ファイル一覧（中身は読まない） |
-| ディレクトリ構成 | Bash `ls -la <target>/` | 全体像 |
-| Git 状態 | Bash `cd <target> && git log --oneline -5` | 直近コミット |
+| ディレクトリ構成 | Bash `ls -la "<target>/"` | 全体像 |
+| Git 状態 | Bash `git -C "<target>" log --oneline -5` | 直近コミット |
+
+収集結果から **プロジェクトの性質**（コードあり/ドキュメント専用、個人/チーム、MVP/本番）を判定し、
+Step 3 の N/A 判断に使う。
 
 ### Step 3: 9カテゴリで評価
 
@@ -91,12 +107,25 @@ Claude Code ベストプラクティスへの適合度をスコア付きレポ�
 | 1 | **CLAUDE.md** | /10 | 存在する・200行以内・具体的・プロジェクト固有・実行可能な指示 |
 | 2 | **Permission 設定** | /10 | settings.json 存在・allow/deny が適切・危険コマンドをブロック |
 | 3 | **Hooks 自動化** | /10 | 自動フォーマット・危険操作ブロック・品質チェック |
-| 4 | **カスタムコマンド** | /10 | 3個以上・実用的（review/test/check 等） |
+| 4 | **カスタムコマンド** | /10 | commands/ と skills/ の合計が3個以上・実用的（review/test/check 等） |
 | 5 | **Git ワークフロー** | /10 | .gitignore 適切・Conventional Commits・ブランチ戦略 |
 | 6 | **テスト体制** | /10 | テストファイル存在・TDD 方針・カバレッジ設定 |
 | 7 | **セキュリティ** | /10 | .env が .gitignore に含まれる・シークレット管理・OWASP 意識 |
 | 8 | **MCP 統合** | /10 | .mcp.json 存在・適切なサーバー選択 |
 | 9 | **サブエージェント / スキル** | /10 | 定義ファイル存在・役割分担・専門特化 |
+
+#### N/A（対象外）の扱い
+
+プロジェクトの性質上そもそも該当しないカテゴリは、低得点にせず **N/A** とする。
+典型例: ドキュメント専用リポの「テスト体制」「Hooks 自動化」、外部連携が不要な小規模リポの「MCP 統合」。
+
+- N/A カテゴリは総合スコアの分母から除外する（例: 2 カテゴリ N/A なら XX / 70）
+- N/A の理由を 1 行で必ず書く
+- 「未整備で今後必要になるもの」は N/A にせず低得点＋改善提案にする。
+  N/A は「このプロジェクトには構造的に不要」な場合のみ
+
+これにより、性質の異なるプロジェクトが不当に低スコアになったり、
+後続の `/project-setup` が不要なテスト設定等を提案してしまうことを防ぐ。
 
 #### 採点ガイドライン
 
@@ -111,28 +140,30 @@ Claude Code ベストプラクティスへの適合度をスコア付きレポ�
 ### Step 4: レポート出力
 
 以下のフォーマットで `<target>/.claude-audit/audit-report.md` にレポートを出力する。
+再監査モードでは「前回比」列を追加し、変動したカテゴリには理由を書く。
 
 ```markdown
 # Project Audit Report: <プロジェクト名>
 
-> 評価日: YYYY-MM-DD
+> 評価日: <date コマンドで取得した日付>
 > 対象パス: <プロジェクトパス>
 > 評価者: Claude Code (project-audit skill)
 > 評価基準: .claude-audit/best-practices.md
+> 前回評価: <再監査時のみ。前回日付とレポートファイル名>
 
 ---
 
-## 総合スコア: XX / 90
+## 総合スコア: XX / <適用カテゴリ数×10>
 
 ### スコアサマリー
 
-| # | カテゴリ | スコア | 判定 |
-|---|---------|--------|------|
-| 1 | CLAUDE.md | X/10 | S/A/B/C/D |
-| 2 | Permission 設定 | X/10 | |
-| ... | ... | ... | ... |
+| # | カテゴリ | スコア | 判定 | 前回比 |
+|---|---------|--------|------|--------|
+| 1 | CLAUDE.md | X/10 | S/A/B/C/D | +2 |
+| 6 | テスト体制 | N/A | — | — |
+| ... | ... | ... | ... | ... |
 
-判定: 9-10 = S, 7-8 = A, 5-6 = B, 3-4 = C, 0-2 = D
+判定: 9-10 = S, 7-8 = A, 5-6 = B, 3-4 = C, 0-2 = D（前回比列は再監査時のみ）
 
 ### カテゴリ別詳細
 
@@ -142,7 +173,7 @@ Claude Code ベストプラクティスへの適合度をスコア付きレポ�
 **良い点**: (具体的に)
 **改善提案**: (具体的なアクション。コード例があれば添える)
 
-(以下、全9カテゴリについて同形式で記述)
+(以下、全カテゴリについて同形式。N/A カテゴリは理由 1 行のみ)
 
 ### 優先改善 TOP 3
 
@@ -158,11 +189,12 @@ Claude Code ベストプラクティスへの適合度をスコア付きレポ�
 ---
 
 > `/project-setup <プロジェクトパス>` でスコア 6 以下の項目を自動改善できます。
+> （N/A カテゴリは project-setup の対象外です）
 ```
 
 ### Step 5: ターミナル出力
 
-レポート書き込み後、ターミナルにスコアサマリーを表示し、以下を案内する:
+レポート書き込み後、ターミナルにスコアサマリー（再監査時は前回比つき）を表示し、以下を案内する:
 
 ```
 レポート出力先: <target>/.claude-audit/audit-report.md
@@ -179,5 +211,7 @@ Claude Code ベストプラクティスへの適合度をスコア付きレポ�
 - **客観性**: 数値・事実に基づいて評価。推測で加点・減点しない
 - **建設的**: 批判ではなく改善提案を中心にする
 - **シークレット注意**: .env の中身は読まない（ファイル名のみ確認）
-- **プロジェクト文脈考慮**: 個人開発 vs チーム、MVP vs 本番、ドキュメント専用リポなど規模・性質を考慮してコメントする
+- **プロジェクト文脈考慮**: 個人開発 vs チーム、MVP vs 本番などを考慮し、構造的に不要な項目は N/A にする
 - **MCP / サブエージェント**: 「使っていない = 悪い」ではない。プロジェクト規模に応じて判断する
+- **レポート互換性**: スコアサマリーテーブルのカテゴリ名・番号・「X/10」形式は
+  `/project-setup` が解析するため変更しない

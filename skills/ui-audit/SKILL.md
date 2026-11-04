@@ -35,8 +35,8 @@ output/browser-exam/
 │   ├── 001_<page>.png
 │   ├── 002_<page>.png
 │   ├── ...
-│   ├── mobile_375_<page>.png       # モバイル検証（オプション）
-│   ├── tablet_768_<page>.png       # タブレット検証（オプション）
+│   ├── NNN_mobile_375_<page>.png   # モバイル検証（オプション）
+│   ├── NNN_tablet_768_<page>.png   # タブレット検証（オプション）
 │   └── report.md                   # Phase レポート（必須）
 ├── YYYYMMDD_ui_audit_phase2_<short_name>/
 │   ├── ...
@@ -65,7 +65,7 @@ output/browser-exam/
 
 ## Step 0: プランモードで監査計画を策定
 
-**ブラウザを開く前に、まずプランモードに入って計画を立てる。**
+**ブラウザを開く前に、EnterPlanMode でプランモードに入って計画を立てる。**
 
 ### 0-1. 前回の監査結果確認
 
@@ -97,7 +97,7 @@ Step 1 の各 Phase で該当ページを優先的に巡回する。
 
 ### 0-2. コードベース調査
 
-EnterPlanMode で計画モードに入り、以下を調査する:
+以下を調査する:
 
 1. **ルート全量収集**: `app/` 配下の `page.tsx` を Glob で列挙
 2. **認証ガード確認**: middleware.ts、layout.tsx のガード条件を Read
@@ -170,6 +170,8 @@ PHASE_NAME="phase<N>_<short_name>"
 OUTDIR="output/browser-exam/${DATE}_ui_audit_${PHASE_NAME}"
 mkdir -p "$OUTDIR"
 ```
+
+シェル変数は Bash の呼び出し間で残らない。以降の `$BU` は実パス `~/.browser-use-env/bin/browser-use` に置き換えて書き、`DATE` と `OUTDIR` はこのブロックで確定した実際の値を毎回そのまま書く。
 
 ### Cookie 復元（Phase 2 以降）
 
@@ -251,6 +253,8 @@ $BU screenshot $OUTDIR/NNN_mobile_375_<page>.png
 $BU eval "window.resizeTo(768, 1024)"
 $BU screenshot $OUTDIR/NNN_tablet_768_<page>.png
 ```
+
+`window.resizeTo` は効かない場合がある。撮影前に `$BU eval "window.innerWidth"` で幅を確認し、変わっていなければそのページは「モバイル未検証」とレポートに書く。
 
 確認ポイント:
 

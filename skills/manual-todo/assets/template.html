@@ -230,11 +230,72 @@
     font-size: 12px;
     margin-left: 4px;
   }
+  /* 外部サービスのドメインバッジ（JS がホスト名から自動付与） */
+  .link-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 1px 7px;
+    border-radius: 9px;
+    margin-right: 6px;
+    vertical-align: 1px;
+    color: #fff;
+    background: var(--text-mute);
+  }
+  .link-copy {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text-mute);
+    font-size: 11px;
+    padding: 1px 8px;
+    margin-right: 12px;
+    cursor: pointer;
+  }
+  .link-copy:hover { color: var(--accent); border-color: var(--accent-dim); }
+  /* 「このファイルに書いてある」を VS Code で開くボタン（data-path 必須・data-line 任意）。
+     サーバ経由でプロジェクトフォルダごと開く。サーバ停止時は vscode:// フォールバック */
+  .task-vscode {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: #0369a1;
+    font-size: 12px;
+    padding: 2px 10px;
+    margin-right: 12px;
+    cursor: pointer;
+  }
+  .task-vscode:hover { border-color: #7dd3fc; background: #f0f9ff; }
+  .task-vscode::before { content: "📝 "; }
+  /* ハブへ戻るリンク（pages/ から ../index.html は http でも file でも解決できる） */
+  .back-to-hub {
+    display: inline-block;
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2px 10px;
+    margin-bottom: 8px;
+  }
+  .back-to-hub:hover { color: var(--accent); border-color: var(--accent-dim); }
+  /* サーバ同期状態の小表示（ヘッダ右上） */
+  .sync-status {
+    float: right;
+    font-size: 11px;
+    color: var(--text-mute);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 2px 9px;
+  }
+  .sync-status.on { color: var(--accent); border-color: var(--accent-dim); }
   .task-cmd {
+    position: relative;
     background: var(--bg);
     border: 1px solid var(--border);
     border-radius: 6px;
-    padding: 8px 12px;
+    padding: 8px 44px 8px 12px; /* 右側はコピーボタン用に余白を確保 */
     margin: 6px 0;
     font-family: "SF Mono", Menlo, Consolas, monospace;
     font-size: 12px;
@@ -246,6 +307,25 @@
     padding: 0;
     color: inherit;
   }
+  /* コマンドブロック右上のコピーボタン（テンプレJSが .task-cmd に自動注入） */
+  .task-cmd-copy {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text-mute);
+    font-size: 11px;
+    padding: 2px 8px;
+    cursor: pointer;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.4;
+    opacity: 0.75;
+    transition: opacity .12s, color .12s, border-color .12s;
+  }
+  .task-cmd-copy:hover { opacity: 1; color: var(--accent); border-color: var(--accent-dim); }
+  .task-cmd-copy.copied { color: var(--accent); border-color: var(--accent-dim); opacity: 1; }
   .task-fields {
     display: grid;
     grid-template-columns: max-content 1fr;
@@ -384,6 +464,8 @@
 <body>
 
 <header>
+  <span class="sync-status" id="sync-status">ローカル保存</span>
+  <a class="back-to-hub" href="../index.html">← ハブへ戻る</a>
   <p class="project-tag">📂 __PROJECT__</p>
   <h1>__TITLE__</h1>
   <p class="subtitle">__SUBTITLE__</p>
@@ -416,7 +498,11 @@ __STAGES__
 
 <script>
 (function() {
-  const STORAGE_KEY = "manual-todo:" + "__STORAGE_KEY__";
+  const SLUG = "__STORAGE_KEY__";
+  const STORAGE_KEY = "manual-todo:" + SLUG;
+  const API = "http://localhost:7799";
+  let serverOn = false;
+  const syncStatus = document.getElementById('sync-status');
 
   const checkboxes = Array.from(document.querySelectorAll('input[type="checkbox"][data-task-id]'));
   const progressFill = document.getElementById('progress-fill');
@@ -427,11 +513,16 @@ __STAGES__
 
   totalCount.textContent = checkboxes.length;
 
+  // 状態は {taskId: {done, checkedAt}}。旧形式（{taskId: true}）も読めるよう互換変換する
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return {};
-      return JSON.parse(raw);
+      const st = JSON.parse(raw);
+      Object.keys(st).forEach(id => {
+        if (typeof st[id] !== 'object') st[id] = { done: !!st[id], checkedAt: "" };
+      });
+      return st;
     } catch (e) { return {}; }
   }
 
@@ -439,6 +530,109 @@ __STAGES__
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (e) {}
+  }
+
+  function taskTitle(id) {
+    const cb = checkboxes.find(c => c.dataset.taskId === id);
+    const el = cb ? cb.closest('.task').querySelector('.task-title') : null;
+    return el ? el.textContent : "";
+  }
+
+  function setSyncStatus(on) {
+    serverOn = on;
+    if (!syncStatus) return;
+    syncStatus.textContent = on ? "● ハブに同期中" : "ローカル保存";
+    syncStatus.classList.toggle('on', on);
+  }
+
+  // todo-hub サーバへ差分を送る。失敗したら localStorage のみに切り替える
+  function pushToServer(partialTasks) {
+    if (!serverOn) return;
+    const tasks = {};
+    Object.keys(partialTasks).forEach(id => {
+      tasks[id] = {
+        title: taskTitle(id),
+        done: !!partialTasks[id].done,
+        checkedAt: partialTasks[id].checkedAt || new Date().toISOString()
+      };
+    });
+    fetch(API + "/api/state/" + SLUG, {
+      method: "POST",
+      mode: "cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tasks: tasks })
+    }).catch(() => setSyncStatus(false));
+  }
+
+  // 起動時: サーバ状態と localStorage をマージ（checkedAt が新しい方を採用）し、双方向に反映
+  function initSync() {
+    fetch(API + "/api/state/" + SLUG, { mode: "cors" })
+      .then(r => r.json())
+      .then(remote => {
+        setSyncStatus(true);
+        const local = loadState();
+        const remoteTasks = (remote && remote.tasks) || {};
+        const merged = {};
+        const ids = new Set(Object.keys(local).concat(Object.keys(remoteTasks)));
+        ids.forEach(id => {
+          const l = local[id], r = remoteTasks[id];
+          if (l && r) {
+            merged[id] = (String(l.checkedAt || "") >= String(r.checkedAt || "")) ?
+              { done: !!l.done, checkedAt: l.checkedAt || "" } :
+              { done: !!r.done, checkedAt: r.checkedAt || "" };
+          } else if (l) {
+            merged[id] = { done: !!l.done, checkedAt: l.checkedAt || "" };
+          } else {
+            merged[id] = { done: !!r.done, checkedAt: r.checkedAt || "" };
+          }
+        });
+        saveState(merged);
+        checkboxes.forEach(cb => {
+          const m = merged[cb.dataset.taskId];
+          const done = !!(m && m.done);
+          cb.checked = done;
+          cb.closest('.task').classList.toggle('done', done);
+        });
+        updateProgress(false);
+        pushToServer(merged);
+      })
+      .catch(() => setSyncStatus(false));
+  }
+
+  // 外部サービスリンク: ドメインバッジ＋URLコピーを自動付与
+  function decorateLinks() {
+    const SERVICES = [
+      [/cloudflare\.com$/, "Cloudflare", "#f38020"],
+      [/vercel\.com$/, "Vercel", "#000000"],
+      [/stripe\.com$/, "Stripe", "#635bff"],
+      [/github\.com$/, "GitHub", "#24292f"],
+      [/supabase\.(com|io)$/, "Supabase", "#3ecf8e"],
+      [/google\.com$/, "Google", "#4285f4"],
+      [/aws\.amazon\.com$/, "AWS", "#ff9900"],
+      [/anthropic\.com|claude\.(ai|com)$/, "Anthropic", "#d97757"],
+      [/openai\.com$/, "OpenAI", "#10a37f"]
+    ];
+    document.querySelectorAll('a.task-link[href^="http"]').forEach(a => {
+      let host = "";
+      try { host = new URL(a.href).hostname; } catch (e) { return; }
+      const hit = SERVICES.find(s => s[0].test(host));
+      const badge = document.createElement('span');
+      badge.className = 'link-badge';
+      badge.textContent = hit ? hit[1] : host.replace(/^www\./, "");
+      if (hit) badge.style.background = hit[2];
+      a.parentNode.insertBefore(badge, a);
+      const copy = document.createElement('button');
+      copy.className = 'link-copy';
+      copy.type = 'button';
+      copy.textContent = 'URLコピー';
+      copy.addEventListener('click', () => {
+        navigator.clipboard.writeText(a.href).then(() => {
+          copy.textContent = '✔ コピー済';
+          setTimeout(() => { copy.textContent = 'URLコピー'; }, 1500);
+        });
+      });
+      a.parentNode.insertBefore(copy, a.nextSibling);
+    });
   }
 
   function updateStageProgress() {
@@ -490,7 +684,7 @@ __STAGES__
   let initiallyComplete = false;
   checkboxes.forEach(cb => {
     const id = cb.dataset.taskId;
-    if (initialState[id]) {
+    if (initialState[id] && initialState[id].done) {
       cb.checked = true;
       cb.closest('.task').classList.add('done');
     }
@@ -501,8 +695,12 @@ __STAGES__
   checkboxes.forEach(cb => {
     cb.addEventListener('change', () => {
       const state = loadState();
-      state[cb.dataset.taskId] = cb.checked;
+      const entry = { done: cb.checked, checkedAt: new Date().toISOString() };
+      state[cb.dataset.taskId] = entry;
       saveState(state);
+      const partial = {};
+      partial[cb.dataset.taskId] = entry;
+      pushToServer(partial);
       cb.closest('.task').classList.toggle('done', cb.checked);
       updateProgress(!initiallyComplete);
       initiallyComplete = false;
@@ -512,14 +710,194 @@ __STAGES__
   resetBtn.addEventListener('click', () => {
     if (!confirm('全タスクのチェックを外しますか？')) return;
     localStorage.removeItem(STORAGE_KEY);
+    const cleared = {};
     checkboxes.forEach(cb => {
       cb.checked = false;
       cb.closest('.task').classList.remove('done');
+      cleared[cb.dataset.taskId] = { done: false, checkedAt: new Date().toISOString() };
     });
+    saveState(cleared);
+    pushToServer(cleared);
     updateProgress(false);
   });
+
+  // VS Code で開くボタン: サーバ経由（プロジェクトフォルダをワークスペースとして開き
+  // 該当ファイルへジャンプ）。サーバ停止時・失敗時は vscode:// URL スキームで代替
+  function initVscodeButtons() {
+    document.querySelectorAll('.task-vscode[data-path]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const p = btn.dataset.path;
+        const line = btn.dataset.line || "";
+        const fallback = () => {
+          window.location.href = "vscode://file" + p + (line ? ":" + line : "");
+        };
+        if (!serverOn) return fallback();
+        fetch(API + "/api/vscode", {
+          method: "POST",
+          mode: "cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path: p, line: line })
+        })
+          .then(r => { if (!r.ok) fallback(); })
+          .catch(fallback);
+      });
+    });
+  }
+
+  // コマンドブロック（.task-cmd）にコピーボタンを注入。
+  // <code> があればそのテキスト、なければブロック全体のテキストをクリップボードへ。
+  function initCmdCopy() {
+    document.querySelectorAll('pre.task-cmd').forEach(pre => {
+      if (pre.querySelector('.task-cmd-copy')) return; // 二重注入ガード
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'task-cmd-copy';
+      btn.textContent = 'コピー';
+      btn.setAttribute('aria-label', 'コマンドをクリップボードにコピー');
+      btn.addEventListener('click', async () => {
+        const code = pre.querySelector('code');
+        const text = (code ? code.innerText : pre.innerText).replace(/\s*コピー\s*$/, '').trim();
+        try {
+          await navigator.clipboard.writeText(text);
+        } catch (e) {
+          // Clipboard API が使えない環境向けフォールバック
+          const ta = document.createElement('textarea');
+          ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+          document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch (_) {}
+          document.body.removeChild(ta);
+        }
+        btn.textContent = '✔ コピー済';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'コピー';
+          btn.classList.remove('copied');
+        }, 1500);
+      });
+      pre.appendChild(btn);
+    });
+  }
+
+  decorateLinks();
+  initVscodeButtons();
+  initCmdCopy();
+  initSync();
 })();
 </script>
 
+<!-- kanban-theme:start -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* where: ~/.claude/skills/manual-todo/assets/kanban-theme.css（正本。scripts/apply-theme.py が各ページの body 終了タグ直前へ差し込む）
+   what : manual-todo ページ（template.html 由来）を kargulstudio/kanban 風の見た目に上書きするテーマ
+   why  : 既存ページの <style> は 12 系統に分かれているため書き換えず、共通の変数名・クラス名を後勝ちで上書きする。
+          body 末尾に後付けアドオンの <style> があるページもあるので、詳細度を 1 段上げて確実に勝たせる */
+:root {
+  --bg: #ffffff; --panel: #ffffff; --panel-2: #fafafa; --card: #ffffff;
+  --border: #ededed; --card-border: #e7e7e9;
+  --text: #121212; --text-dim: #757575; --text-mute: #a1a1a1; --icon: #aaaaaa;
+  --accent: #0d5fea; --accent-dim: #e7effd;
+  --success: #47ba39; --success-dim: #e9f7e7; --warning: #ff6e00; --danger: #ef1111;
+  --done: #a1a1a1; --primary: #121212;
+  --shadow: 0 2px 4px 0 rgb(35 35 35 / .03), 0 1px 2px 0 rgb(35 35 35 / .04), 0 0 0 3px rgb(205 205 205 / .12);
+  --shadow-control: 0 1px 2px 0 rgb(0 0 0 / .08), 0 0 0 1px #ededed;
+  --shadow-lift: 0 0 0 1px rgb(37 117 255 / .24), 0 0 0 4px rgb(37 117 255 / .16), 0 2px 12px 0 rgb(35 35 35 / .08);
+  --shadow-popover: 0 0 0 1px #ededed, 0 4px 12px rgb(0 0 0 / .06), 0 12px 32px rgb(0 0 0 / .08);
+  --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+/* 日本語本文のため kanban の line-height 130% より広げ、ヒラギノが W6 に化けないよう本文は 400 */
+html, body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--font-sans); font-size: 14px; font-weight: 400;
+  line-height: 1.6; letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+html body header { background: var(--panel); border-bottom: 1px solid var(--border); box-shadow: none; }
+html body header .project-tag {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 500;
+  color: var(--text-dim); letter-spacing: 0; text-transform: none;
+}
+html body header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
+html body header .subtitle { color: var(--text-dim); font-size: 13px; }
+
+/* 進捗バー */
+html body .progress-bar { height: 4px; background: #f0f0f0; border-radius: 999px; }
+html body .progress-fill { background: var(--accent); border-radius: 999px; }
+html body .progress-text { font-family: var(--font-mono); font-size: 12px; color: var(--text-mute); }
+html body .progress-text strong { color: var(--text); font-weight: 500; }
+
+/* ステージ = kanban のカード */
+html body .stage { border: none; border-radius: 16px; box-shadow: var(--shadow); margin-bottom: 20px; overflow: hidden; }
+html body .stage-title {
+  background: var(--panel); border-bottom: 1px solid var(--card-border);
+  font-size: 14px; font-weight: 600; letter-spacing: -0.02em; gap: 10px; padding: 14px 18px;
+}
+html body .stage-num {
+  width: 18px; height: 18px; border-radius: 5px;
+  background: var(--primary); color: #fff;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+  box-shadow: 0 1px 2px 0 rgb(9 9 11 / .08), inset 0 1px 20px 0 rgb(255 255 255 / .16);
+}
+html body .stage-progress {
+  background: none; border: none; padding: 0; border-radius: 0;
+  font-family: var(--font-mono); font-size: 12px; color: var(--text-mute);
+}
+html body .stage-progress.complete { color: var(--success); }
+html body .stage-desc { color: var(--text-dim); }
+
+/* タスク行 */
+html body .task { border-bottom: 1px solid var(--card-border); }
+html body .task:hover { background: var(--panel-2); }
+html body .task-title { font-weight: 500; }
+html body .task input[type="checkbox"] {
+  width: 16px; height: 16px; border: 1.5px solid #d4d4d4; border-radius: 5px; background: var(--panel);
+}
+html body .task input[type="checkbox"]:hover { border-color: var(--text-mute); }
+html body .task input[type="checkbox"]:checked { background: var(--success); border-color: var(--success); }
+html body .task input[type="checkbox"]:checked::after { left: 4px; top: 0; width: 4px; height: 9px; border-color: #fff; }
+html body .task.done .task-title { color: var(--text-mute); }
+html body .task-desc, html body .task-why, html body .task-after { color: var(--text-dim); }
+html body .task-why::before, html body .task-after::before { color: var(--text-dim); font-weight: 600; }
+html body .task-link { color: var(--accent); border-bottom: none; padding-bottom: 0; }
+html body .task-link:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+html body .task-meta { color: var(--text-mute); }
+html body .task-cmd, html body .task-fields {
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px;
+}
+html body .task-cmd, html body .task-fields dd { font-family: var(--font-mono); }
+html body .task-shot { background: var(--panel-2); border-color: var(--border); border-radius: 12px; }
+
+/* ボタン類 = kanban の control */
+html body .back-to-hub, html body .hub-link, html body .sync-status,
+html body .link-copy, html body .task-vscode, html body .task-cmd-copy, html body #reset-btn {
+  background: var(--panel); color: var(--text-dim); border: none; border-radius: 8px;
+  box-shadow: var(--shadow-control); font-family: var(--font-sans); font-weight: 500;
+}
+html body .back-to-hub:hover, html body .hub-link:hover, html body .link-copy:hover,
+html body .task-vscode:hover, html body .task-cmd-copy:hover {
+  background: var(--panel-2); color: var(--text); border: none;
+}
+html body .task-vscode { color: var(--text); }
+html body .sync-status.on { color: var(--success); border: none; }
+html body .task-cmd-copy.copied { color: var(--success); border: none; }
+html body #reset-btn:hover { color: var(--danger); background: var(--panel-2); border: none; }
+
+/* いまやること = 持ち上げたカード */
+html body .hero-card { background: var(--panel); border: none; border-radius: 16px; box-shadow: var(--shadow-lift); }
+html body .hero-card .hero-label {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 500;
+  color: var(--accent); letter-spacing: 0; text-transform: none;
+}
+html body .hero-card .hero-task { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
+html body .hero-card .hero-stage { color: var(--text-dim); }
+
+html body footer { color: var(--text-mute); }
+html body .celebration { border: none; border-radius: 16px; box-shadow: var(--shadow-popover); }
+html body .celebration h2 { color: var(--success); font-weight: 600; }
+</style>
+<!-- kanban-theme:end -->
 </body>
 </html>

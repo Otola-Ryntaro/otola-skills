@@ -12,7 +12,7 @@ description: >
 noplan: true
 ---
 
-<!-- IMPORTANT: このスキルはplan modeに入らずに直接実行すること -->
+<!-- Phase 2 のプラン提示でユーザー確認を取るため、plan mode には入らない -->
 
 # vpush: バージョン付き git push
 
@@ -91,6 +91,18 @@ git log $(git describe --tags --abbrev=0 2>/dev/null || echo HEAD~10)..HEAD --on
 - **minor**: `feat:` コミットあり
 - **patch**: `fix:` / `refactor:` / `docs:` / `chore:` のみ
 
+**CI レベル予測（scripts/ci-level.sh があるプロジェクトのみ）**:
+プラン提示時に push 対象範囲の CI 消費を予測して表示する:
+
+```bash
+sh scripts/ci-level.sh "origin/main..HEAD"
+# level=docs → 「CI はスキップされます（Actions 消費ほぼゼロ）」
+# level=code → 「CI (quality+security, 約15分) が走ります」
+```
+
+docs のみの push の場合は「コード変更と相乗りさせるか」をユーザーに一言確認する
+（GitHub Actions の無料枠を節約するため）。
+
 ### Phase 3: 未コミット変更の処理
 
 未コミットの変更がある場合:
@@ -131,117 +143,6 @@ git push origin <current-branch> --tags
 ```
 
 **必ずユーザー確認を取ってから実行する。**
-
-### Phase 6.5: クロスプロジェクト連携（MEOcli プロジェクトのみ）
-
-MEOcli プロジェクト（kuchikomi_maker または Meocli_LP）の場合、もう一方のプロジェクトにも変更を同期する。
-
-**バージョン同期ルール（正本: `~/claude code/_shared/meocli/url-contracts.md`）**:
-
-- アプリ本体と LP は **同一バージョン番号を維持** する
-- 次のバージョンは **両者の最大バージョン + 1** にする
-  - 例: アプリ v1.8.0、LP v1.9.0 → 次は v1.10.0
-- Phase 1 のバージョン決定時に相手側の最新タグも確認すること
-
-**プロジェクト判定:**
-
-| カレントディレクトリ | 自プロジェクト | 相手プロジェクト                             |
-| -------------------- | -------------- | -------------------------------------------- |
-| `*/kuchikomi_maker*` | アプリ本体     | LP (`~/claude code/Meocli_LP`)               |
-| `*/Meocli_LP*`       | LP             | アプリ本体 (`~/claude code/kuchikomi_maker`) |
-
-#### 6.5-A: 相手プロジェクトのバージョン同期
-
-```bash
-# 相手側の最新タグを確認
-cd <相手プロジェクト>
-git tag --sort=-v:refname | head -1
-
-git status
-git log $(git describe --tags --abbrev=0 2>/dev/null)..HEAD --oneline
-# 未 push のコミットがあればタグ付き push
-git tag -a vX.Y.Z -m "Release vX.Y.Z: 主な変更の要約"
-git push origin main --tags
-```
-
-- 相手側に未コミット変更がある場合はユーザーに確認
-- 相手側にコミットがない場合はタグのみ作成してバージョン番号を同期
-
-#### 6.5-B: アプリ側 releases.ts の自動更新（LP → アプリ方向のみ）
-
-**LP プロジェクトで /vpush を実行した場合**、アプリ本体の `lib/data/releases.ts` にリリースエントリを自動追加する。
-これにより `app.meocli.com/help/updates` のヘルプセンターにLP側の変更が反映される。
-
-**手順:**
-
-1. LP側のコミット履歴からリリース内容（highlights）を収集する
-
-   ```bash
-   cd ~/claude\ code/Meocli_LP
-   git log $(git describe --tags --abbrev=0 HEAD^ 2>/dev/null)..HEAD --format='%s'
-   ```
-
-2. アプリ側の `lib/data/releases.ts` を Read する
-
-   ```
-   ~/claude code/kuchikomi_maker/lib/data/releases.ts
-   ```
-
-3. 既に同一バージョンのエントリが存在するか確認する
-   - **存在する場合**: highlights にLP側の変更を **追記** する（重複しない項目のみ）
-   - **存在しない場合**: 先頭に新エントリを追加する
-
-4. エントリのフォーマット:
-
-   ```typescript
-   {
-     version: 'X.Y.Z',
-     date: 'YYYY-MM-DD',
-     title: 'コミット履歴から要約したタイトル',
-     highlights: [
-       'LP側の変更内容1（コミットメッセージから生成）',
-       'LP側の変更内容2',
-     ],
-     type: 'minor',  // バンプ種別に応じて設定
-   },
-   ```
-
-5. highlights の生成ルール:
-   - コミットメッセージの `feat:` / `fix:` / `chore:` プレフィックスを除去
-   - ユーザー向けに読みやすい日本語に整形
-   - `docs:` のみのコミットは除外（ユーザーに見せる必要がない）
-   - LP固有の技術的変更（ESLint設定等）は除外し、ユーザー向けの変更のみ含める
-
-   **⚠️ 公開コンテンツ表現ルール（必須）:**
-   releases.ts はヘルプセンター（app.meocli.com/help/updates）で誰でも閲覧可能。
-   以下を厳守すること:
-   - **AIモデル名を書かない**: Gemini, GPT, Claude 等 → 「AI」とだけ書く
-   - **内部ツール名を書かない**: Sentry, Prisma, Redis, ESLint, Turbopack, Inngest, vitest, DataForSEO 等
-   - **セキュリティ不安を煽らない**: 「脆弱性修正」「リスクが高い」→「安全性向上」「セキュリティ強化」
-   - **内部チケット番号を書かない**: ZD-xxx, SEC-xxx, BUG-xxx 等
-   - **ユーザー目線で書く**: 技術的な実装詳細ではなく、ユーザーにとってのメリットや改善点で表現する
-
-6. `featured` フラグの自動判定:
-   以下のいずれかを満たす場合、エントリに `featured: true` を付ける:
-   - `feat:` コミットが **2件以上** 含まれる
-   - 新しいページ/画面が追加された（`app/` 配下に新規 `page.tsx`）
-   - バンプ種別が **major**
-   - highlights が **4件以上** かつ `feat:` 由来の項目を含む
-
-7. Edit ツールで `releases.ts` の先頭エントリの前に新エントリを挿入する
-
-8. アプリ側で git commit + push する（Vercel 自動デプロイ）
-   ```bash
-   cd ~/claude\ code/kuchikomi_maker
-   git add lib/data/releases.ts
-   git commit -m "docs: v{VERSION} リリースノート追加（LP側変更を含む）"
-   git push origin main
-   ```
-
-**注意:**
-
-- アプリ本体で /vpush した場合は、この手順は不要（アプリ側で直接 releases.ts を管理しているため）
-- LP側のデプロイは `cd ~/claude\ code/Meocli_LP/app && npx vercel deploy --prod` で別途実行
 
 ### Phase 7: 完了レポート
 
@@ -335,8 +236,7 @@ gh run view <run-id> --json jobs --jq '.jobs[] | select(.conclusion=="failure") 
 修正を実行しますか？
 ```
 
-**CI 失敗時は `/ci-fix` スキルに自動引き継ぎする（義務）。**
-修正計画の提示で止まらず、`/ci-fix` を呼び出して並列エージェントによる調査・修正を開始すること。
+ユーザーが承認したら、修正計画に沿って修正する。
 
 ## 引数
 

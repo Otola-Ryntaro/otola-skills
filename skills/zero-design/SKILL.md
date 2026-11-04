@@ -5,7 +5,7 @@ description: >
   まずユーザーの困りごと・優先目標をヒアリングし、プロジェクト実態に合わせて調査観点を動的に選択、
   承認された観点だけを深掘りする。全指摘に根拠（file:line）・実害シナリオ・検証方法・確信度を必須化し、
   反証フェーズで REJECTED された指摘はレポートに載せない。
-  出力は docs/YYYYMMDD_zero_design_report.md。/mine-check → /ticket-gen への接続は提示のみ（自動実行しない）。
+  出力は docs/YYYYMMDD_zero_design_report.md。/ticket-gen への接続は提示のみ（自動実行しない）。
   発動条件:
   (1) /zero-design コマンド
   (2) 「ゼロから再設計」「全面的に見直し」「設計レビュー」「アーキテクチャ総点検」等のキーワード
@@ -102,7 +102,7 @@ Phase 3 の全 finding（確信度 LOW を含む）に対して反証パスを�
 **検証**: 全指摘は反証フェーズ通過済み（CONFIRMED N件 / PLAUSIBLE M件 / REJECTED除外 K件）
 
 ## エグゼクティブサマリー
-3-5行。ユーザーの動機に直接答える形で書く。
+ユーザーの動機に直接答える形で、結論から短く書く。
 
 ## 観点1: <観点名>
 ### 現状評価
@@ -127,7 +127,7 @@ Phase 3 の全 finding（確信度 LOW を含む）に対して反証パスを�
 ```
 
 評価ルール:
-- マーケティング言語禁止（「素晴らしい」「完璧」等は使わない）
+- 評価は形容ではなく事実と根拠で述べる
 - 「なぜ問題か」「何が改善されるか」を必ず明記
 
 **完了報告と次のアクション提示**（自動実行はしない）:
@@ -137,6 +137,5 @@ Phase 3 の全 finding（確信度 LOW を含む）に対して反証パスを�
    CONFIRMED X件 / PLAUSIBLE Y件（要確認）
 
 次のアクション（推奨順）:
-1. /mine-check docs/YYYYMMDD_zero_design_report.md   ← 過去事故との照合（大規模変更前の地雷チェック）
-2. /ticket-gen docs/YYYYMMDD_zero_design_report.md   ← チケット分解
+1. /ticket-gen docs/YYYYMMDD_zero_design_report.md   ← チケット分解
 ```

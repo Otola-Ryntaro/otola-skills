@@ -4,7 +4,7 @@ description: |
   既にチケット（ticket_index.md）が生成済みで、Codex 側 goal-feed-impl が /goal 実装ループを回している / 回す予定の場面で、CC 側がレビュー役として並走する短縮スキル。
   Phase A〜D（計画・agmsg 合議・プランファイル Write）はスキップし、Phase E（初回 ticket レビューが未実施なら実施）→ Phase F（Codex から届く phase progress review request を自動処理）→ Phase G（final audit + /shime）を担当する。
   発動条件: (1) /goal-feed-impl コマンド (2)「チケットは出来ているので実装から」「/goal で回すので CC はレビュー係」「Phase 進捗レビューだけお願い」「ticket-verify までまとめて」等のキーワード (3) 既存 docs/tickets*/ や codex/tickets*/ が存在する状態で「Codex と組んで最後まで実装ループを回して」と依頼されたとき。
-  使用しないケース: チケット未生成（→ goal-feed 本体を使う）/ 計画を最初からやり直す必要があるとき / 単発 review だけしたいとき（→ /cr を直接使う）。
+  使用しないケース: チケット未生成（→ goal-feed 本体を使う）/ 計画を最初からやり直す必要があるとき / 単発 review だけしたいとき（→ /cr を直接使う）/ Orca の外で動かすとき（Orca のターミナルで起動し直す）。
 allowed-tools: Read, Write, Edit, Grep, Glob, Bash, Skill, AskUserQuestion, TaskCreate, TaskUpdate
 ---
 
@@ -22,13 +22,13 @@ Codex 側 `goal-feed-impl` が `/goal` を使って `/ko` → `/cr`（自己）�
 
 - `docs/tickets*/ticket_index.md` または `codex/tickets*/ticket_index.md` が存在。
 - （望ましい）`codex/plans/*_plan.md` が存在 — Acceptance Criteria との突合に使える。
-- agmsg 設定済み。
-- ghostty + herdr 環境。Codex の起動・入力操作は CC 側が herdr 経由で行う（`goal-feed` 本体 SKILL.md の「herdr 連携」節と共通ルール: prompt 先頭に `/` を置かない / Codex の skill 起動は `$agmsg` `$ticket-gen` 表記 / slash command は文末のみ）。
+- Orca のターミナルで動作していること。worktree の作成と Codex の起動は CC 側が `orca` で行う（`goal-feed` 本体 SKILL.md の「Orca 連携」節と共通ルール: 送る文の先頭に `/` を置かない / Codex の skill 起動は `$agmsg` `$ticket-gen` 表記 / slash command は文末のみ）。
 
 ## 参照する references
 
 本 skill は独自 references を持たず、`goal-feed` の references を共有する:
 
+- `~/.claude/skills/goal-feed/references/orca-protocol.md` — worktree・agmsg の名前・ペイン入力・待機・片付け（Preflight の前に必ず読む）
 - `~/.claude/skills/goal-feed/references/review-protocol.md` — Phase E〜G の詳細（両者で共通）
 - `~/.claude/skills/goal-feed/references/message-schema.md` — subject / body 一覧（`goal-feed-impl` prefix 版もここに集約）
 - `~/.claude/skills/goal-feed/references/paid-service-quality-bar.md` — レビュー時の観点
@@ -41,6 +41,7 @@ Codex 側 `goal-feed-impl` が `/goal` を使って `/ko` → `/cr`（自己）�
 2. **自動レビューの二段ゲート。** 「本 skill がこのセッションで発動済み」かつ「subject が `goal-feed-impl ` または `goal-feed ` prefix で始まる review request」の両方で自動処理。
 3. **有料サービス品質バーを毎レビューで参照する。**
 4. **本質修正を優先する。** 症状潰しの diff は Critical で push back。
+5. **自己修復プロトコルに従う。** `goal-feed` 本体 SKILL.md の「自己修復プロトコル」節（S-1〜S-5）を共有する: `.goalfeed/state.json` への状態永続化、Codex の手が止まったのに返信がないときの自動起こし直し（ユーザー確認なし、3 連続停滞でのみエスカレーション）、冪等な待機、APPROVE への検証根拠引用の必須化。
 
 ## Plan Mode について
 
@@ -84,31 +85,17 @@ Read して以下を判定:
 - `SLUG` を `AskUserQuestion` で確認
 - `DATE_YYYYMMDD` は `date +%Y%m%d` を使用
 
-### P-4. agmsg identity 確認
+### P-4. Orca の配置を確定し、Codex を起動する
 
-`goal-feed` Phase A-2, A-3 と同じ手順で:
+`orca-protocol.md` の 1〜5 節に従う。
 
-- `whoami.sh` で TEAM / AGENT を取得
-- `team.sh` で Codex peer を解決（複数なら AskUserQuestion）
-- `CODEX_PEER` を握って以後固定
+1. 前提チェックと配置の判定を行う。orca-master 配下なら渡された worktree・ハンドル・名前を使い、2 と 3 は飛ばす。
+2. `ticket_index.md` がコミット済みか `git ls-files --error-unmatch <path>` で確かめる（未コミットだと worktree に来ない）。未コミットなら、コミットしてよいかを `AskUserQuestion` で確認する。
+3. worktree を作り、agmsg の名前を登録し、Codex を起動する。ブリーフには goal 機能の使用と完遂条件を明示する:
 
-### P-4b. herdr で Codex pane を立ち上げ、実装ループを開始させる
-
-1. `herdr agent list` で既存の codex agent を確認。なければ:
-
-   ```bash
-   herdr pane split --current --direction right --cwd "$(pwd)" --no-focus
-   # 出力の pane ID を控える
-   herdr agent start codex --kind codex --pane <PANE_ID>
+   ```text
+   $goal-feed-impl <ticket_index のパス> で対応して。goal 機能を使用すること。goal は全チケットを完遂し、CC の final review を通すこと
    ```
-
-2. 起動確認後、初回 prompt で **goal 機能の使用と完遂条件を明示**して実装ループを開始させる:
-
-   ```bash
-   herdr agent prompt codex 'inbox を確認して goal-feed-impl の依頼に対応して。goal 機能を使用すること。goal は全チケットを完遂し shime まで到達すること。skill 起動は $agmsg 表記を使うこと'
-   ```
-
-   先頭に `/` を置かない（Codex 側で slash command と誤解釈される）。
 
 ### P-5. Critical plan review 指摘の確認
 
@@ -116,19 +103,6 @@ Read して以下を判定:
 
 - 修正済みとして続行
 - 一旦停止して Codex 側に修正依頼
-
-### P-6. worktree lock 確認
-
-作業が専用 worktree（feature/task 用のリンク worktree）で行われている場合、`git worktree list --porcelain` で locked 状態を確認し、unlocked なら以下で保護する:
-
-```bash
-git worktree lock --reason "managed=true goal=<SLUG> owner=cc created=<YYYY-MM-DD>" <exact-path>
-```
-
-- primary worktree（main/master/develop チェックアウト中の本体）は**絶対に lock しない**
-- 既に別 reason で locked のものは上書き・unlock しない
-- lock reason は不変メタデータ。状態の書き換えには使わない
-- 後片付けは Phase G の Cleanup Decision Gate（review-protocol.md G-5b）でのみ行う
 
 ### P-7. 発動フラグの立て込み
 
@@ -156,10 +130,11 @@ git worktree lock --reason "managed=true goal=<SLUG> owner=cc created=<YYYY-MM-D
 - Codex 側 `goal-feed-impl` は各 Phase の `/ko` → `/cr`（自己）→ `/next` を回し、Phase 完遂ごとに request を投げる想定
 - `/cr` は CC 側でも呼ぶ（Skill 経由）。strict 判定は共通ロジック
 - Critical 相当があれば「修正→再送」の往復。3 回で収束しなければ AskUserQuestion で方針変更を確認
-- agmsg 返信後、`herdr agent prompt` で Codex に動作再開を指示する。**prompt 末尾に `/goal resume` を付ける**:
+- agmsg 返信後、Codex を起こす。**文の末尾に `/goal resume` を付ける**:
 
   ```bash
-  herdr agent prompt codex 'inbox を確認して。Phase <N> のレビュー結果を返信済み。指摘対応のうえ次へ進んで /goal resume'
+  orca terminal send --terminal <codex_handle> --enter --wait-submit 10 --json \
+    --text '~/.agents/skills/agmsg/scripts/inbox.sh <TEAM> <slug>-codex で受信を確認して。Phase <N> のレビュー結果を返信済み。指摘対応のうえ次へ進んで /goal resume'
   ```
 
 **返信 subject**: `goal-feed-impl phase progress review findings`
@@ -173,9 +148,9 @@ git worktree lock --reason "managed=true goal=<SLUG> owner=cc created=<YYYY-MM-D
 
 **返信 subject**: `goal-feed-impl final review findings`
 
-**Worktree Cleanup Decision Gate（G-5b、必須）**: /shime より前に、専用 worktree の後片付け判断（integrate / PR / park / abandon）をユーザーに確認する。integrate / abandon なら「検証→コマンド表示→明示承認→再検証→unlock→直ちに remove」の順序を厳守。詳細は review-protocol.md G-5b。
+**Worktree Cleanup Decision Gate（G-5b、必須）**: /shime より前に、先に Codex を閉じ、後片付け判断（integrate / PR / park / abandon）をユーザーに確認する。詳細は review-protocol.md G-5b。
 
-**最後**: `/shime` を Skill 経由で呼び、日報作成と Plans.md 引き継ぎ。完了後に Codex へ `goal-feed-impl session closed` を通知。
+**最後**: `/shime` を Skill 経由で呼び、日報作成と Plans.md 引き継ぎ。
 
 ---
 
@@ -211,8 +186,8 @@ git worktree lock --reason "managed=true goal=<SLUG> owner=cc created=<YYYY-MM-D
 | ticket_index.md が見つからない | ユーザーに `goal-feed` 本体を推奨 |
 | plan file が見つからない | 続行するが Acceptance Criteria 突合が甘くなる旨を警告、`AskUserQuestion` で「plan file を後から作りますか？」を確認 |
 | 未解決 Critical 指摘あり | Preflight で停止、`AskUserQuestion` で判断 |
-| Codex peer 不明 | goal-feed と同じ手順で解決 |
-| Codex が長時間沈黙 | 15 分ごとに `inbox.sh` を能動チェック。1 時間無音でユーザーに続行判断を仰ぐ |
+| Orca の外にいる | Orca のターミナルで起動し直すようユーザーに伝えて停止 |
+| Codex の手が止まったのに返信がない | 自己修復プロトコル S-2: 画面を読んで起こし直す（ユーザー確認なし）。3 連続停滞でユーザーに確認を依頼 |
 | /shime 起動失敗 | 手動で日報テンプレを提示、Plans.md 引き継ぎだけでも履行 |
 
 ---
@@ -227,7 +202,7 @@ git worktree lock --reason "managed=true goal=<SLUG> owner=cc created=<YYYY-MM-D
 
 ## 変更しないもの
 
-- Codex 側 skill / config / state
+- Codex 側 config / state
 - 既存 slash commands / agmsg
 - `~/.claude/skills/goal-feed/references/`（本 skill から参照するが編集はしない）
 

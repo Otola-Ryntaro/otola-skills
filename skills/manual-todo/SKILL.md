@@ -1,6 +1,6 @@
 ---
 name: manual-todo
-description: 実装作業の途中・完了時に、Claude では完結できず**ユーザー本人が手作業でやる必要がある残タスク**を、進捗バー＋チェックボックス＋ステージ分けのシンプルな HTML TODO リストとして出力するスキル。デフォルト出力先は CWD の `manual_todo/YYYY-MM-DD_HHmm_<slug>.html`。Chrome 等で開けばチェック状態は localStorage に自動保存される。発動条件 (1) /manual-todo コマンド (2)「手動でやる作業」「わたしがやる作業」「ユーザー側でやる必要がある」「手作業のTODO」「残作業をリストにして」「セットアップ手順をチェックリストに」等のキーワード (3) 実装完了後に「アカウント作成」「APIキー発行」「ドメイン設定」「課金登録」「OAuth承認」「DNS設定」「ブラウザでクリック」等、Claude では実行不能な人間側作業が複数残っているとき。使用しないケース：Claude が自分で実行可能な作業（コマンド実行・ファイル編集・テスト）を含むだけのリスト → 通常の TodoWrite で十分。コードレビュー・PR レビューのチェックリスト → /code-review。日報・引き継ぎ → /shime /nakajime。
+description: 実装作業の途中・完了時に、Claude では完結できず**ユーザー本人が手作業でやる必要がある残タスク**を、進捗バー＋チェックボックス＋ステージ分けのシンプルな HTML TODO リストとして出力するスキル。出力先は集約ハブ `~/dev/todo/pages/YYYY-MM-DD_HHmm_<slug>.html`（全プロジェクト共通。`~/dev/todo/index.html` が一覧ハブ）。チェック状態は todo-hub ローカルサーバ経由で `~/dev/todo/state/<slug>.json` に保存され、Claude が次セッションで読める。サーバ停止時は localStorage フォールバック。発動条件 (1) /manual-todo コマンド (2)「手動でやる作業」「わたしがやる作業」「ユーザー側でやる必要がある」「手作業のTODO」「残作業をリストにして」「セットアップ手順をチェックリストに」等のキーワード (3) 実装完了後に「アカウント作成」「APIキー発行」「ドメイン設定」「課金登録」「OAuth承認」「DNS設定」「ブラウザでクリック」等、Claude では実行不能な人間側作業が複数残っているとき。使用しないケース：Claude が自分で実行可能な作業（コマンド実行・ファイル編集・テスト）を含むだけのリスト → 通常の TodoWrite で十分。コードレビュー・PR レビューのチェックリスト → /code-review。日報・引き継ぎ → /shime /nakajime。
 ---
 
 # Manual TODO: 手作業残タスクの HTML 化スキル
@@ -73,11 +73,11 @@ description: 実装作業の途中・完了時に、Claude では完結できず
 
    良い例：
    - 「Stripe ダッシュボード → Developers → API keys で `sk_live_...` をコピーして音良に渡す」
-   - 「お名前.com で `meocli-staging.com` を取得（年額 ¥1,200 想定、本人カードで決済）」
+   - 「お名前.com で `example-staging.com` を取得（年額 ¥1,200 想定、本人カードで決済）」
 
    各タスクには **必ず** 次の 2 つを地の文で添える（テンプレの `.task-why` / `.task-after`）：
-   - **なぜやるか**（1〜2 文。これをやらないと何が進まないのか）
-   - **完了するとどうなるか**（1〜2 文。完了後にユーザーが確認できる結果状態）
+   - **なぜやるか**（これをやらないと何が進まないのか）
+   - **完了するとどうなるか**（完了後にユーザーが確認できる結果状態）
 
    さらに次のいずれかを必要に応じて添える：
    - **URL**（直リンク。`https://dashboard.stripe.com/apikeys` のように深いリンクが望ましい）
@@ -90,22 +90,56 @@ description: 実装作業の途中・完了時に、Claude では完結できず
 4. **HTML を生成して保存する**
 
    - テンプレ：`~/.claude/skills/manual-todo/assets/template.html`
-   - 出力先：CWD 配下 `manual_todo/<YYYY-MM-DD>_<HHmm>_<slug>.html`
-     - 例：`manual_todo/2026-06-24_1610_stripe-honban-setup.html`
-     - `<slug>` は内容を表すケバブケース 3〜6 単語
+     - 見た目は末尾の `kanban-theme` ブロック（正本 `assets/kanban-theme.css`）で上書きしている。テーマを直したら
+       `python3 scripts/apply-theme.py assets/template.html ~/dev/todo/pages/*.html` で全ページへ再配布する（冪等）
+   - 出力先：**集約ハブ** `~/dev/todo/pages/<YYYY-MM-DD>_<HHmm>_<slug>.html`
+     - 例：`~/dev/todo/pages/2026-06-24_1610_stripe-honban-setup.html`
+     - `<slug>` は内容を表すケバブケース 3〜6 単語（ファイル名から `.html` を除いた全体が slug）
    - 日時取得は `date +"%Y-%m-%d_%H%M"` を Bash で実行（Claude 自身は時刻を知らない）
-   - ディレクトリが無ければ `mkdir -p` で作る
+   - ディレクトリが無ければ `mkdir -p ~/dev/todo/pages` で作る
 
-5. **生成後の案内**
+5. **ハブに登録して index を更新する**
 
-   ファイルパスを示し、開く提案までする：
+   HTML 生成後、todo-hub CLI（`~/.claude/skills/manual-todo/scripts/todo-hub.py`）で登録する：
+
+   ```bash
+   python3 ~/.claude/skills/manual-todo/scripts/todo-hub.py register \
+     --slug "2026-06-24_1610_stripe-honban-setup" \
+     --project "$(basename "$PWD")" \
+     --project-path "$PWD" \
+     --title "Stripe 本番環境セットアップ"
+   ```
+
+   - `register` は state JSON の骨組み生成と `reindex`（index.html 再生成、hero.png があればサムネコピー）まで自動で行う
+   - ハブには shime visualize の作業ログ機能も同居する: `todo-hub report-add --path <visualize HTML絶対パス>` で `~/dev/todo/reports.html`（index ヘッダの「📊 作業ログ」リンク先）に登録、`todo-hub report-scan` で `~/claude code/*/daily_report/*_visualize.html` の一括登録＋消失分 prune
+   - さらに、全タスクの初期状態（`done: false`）を state JSON に **Claude が Write で書き込む**：
+     `~/dev/todo/state/<slug>.json` の `tasks` を `{"1-1": {"title": "...", "done": false, "checkedAt": ""}, ...}` の形で埋める（ページを開かなくても index に総数が出るようにするため）
+
+6. **生成後の案内**
 
    ```
-   作成しました: /path/to/manual_todo/2026-06-24_1610_xxx.html
-   → 開きますか？ (`open <path>` で Chrome 等が起動します)
+   作成しました: ~/dev/todo/pages/2026-06-24_1610_xxx.html
+   → 開きますか？（専用ウィンドウで開きます）
    ```
 
-   ユーザーから「開いて」と言われたら `open <path>` を実行する（macOS）。
+   ユーザーから「開いて」と言われたら次を実行する：
+
+   ```bash
+   python3 ~/.claude/skills/manual-todo/scripts/todo-hub.py open "<slug>"
+   ```
+
+   これはサーバ（localhost:7799）を自動起動し、**Chrome アプリモード＋専用プロファイル**（`~/dev/todo/chrome-profile`）の独立ウィンドウで開く。通常の Chrome アカウントとは混ざらない。ハブ一覧を開くときは slug なしで `... open`。
+
+---
+
+## セッション開始時・タスク確認時の読み方（Claude 向け）
+
+ユーザーの手作業タスクの進捗を確認したいとき（Plans.md 更新時、/shime、/nakajime、「TODO どうなってる？」等）：
+
+1. `~/dev/todo/state/*.json` を読む（現在のプロジェクトに関係する分は `projectPath` で判別）
+2. `done: false` のタスクが残っていれば、次にやるべき手作業として提示する
+3. 全完了していれば Plans.md の該当項目を完了扱いにしてよい
+4. `checkedAt` でいつチェックされたかが分かる（ブラウザでのチェック操作がサーバ経由で即書き込まれている）
 
 ---
 
@@ -115,7 +149,7 @@ description: 実装作業の途中・完了時に、Claude では完結できず
 
 | プレースホルダ | 置換内容 |
 |---------------|---------|
-| `__PROJECT__` | 実行時のカレントディレクトリ名（`pwd` の basename、例: 「Evironment」「kuchikomi_maker」）をそのまま機械的に使う。後で見返したときにどのプロジェクトの手作業か一目で分かるようにするための表示で、要約や言い換えはしない |
+| `__PROJECT__` | 実行時のカレントディレクトリ名（`pwd` の basename、例: 「my-app」「my-site」）をそのまま機械的に使う。後で見返したときにどのプロジェクトの手作業か一目で分かるようにするための表示で、要約や言い換えはしない |
 | `__TITLE__` | このリストのタイトル（例: 「Stripe 本番環境セットアップ」） |
 | `__SUBTITLE__` | 1 行サブタイトル（背景・目的。例: 「2026-06-24 実装分。これが終わると本番決済が動きます」） |
 | `__STORAGE_KEY__` | localStorage のキー。**他リストと衝突しないユニーク文字列**（ファイル名と同じスラッグでよい） |
@@ -160,12 +194,17 @@ description: 実装作業の途中・完了時に、Claude では完結できず
 ルール：
 
 - `data-task-id` は `<stage番号>-<task番号>` の形式でユニークに（localStorage キーになる）
-- `task-why`（なぜやるか）と `task-after`（完了するとどうなるか）は **全タスク必須**。各 1〜2 文の地の文で書く
+- `task-why`（なぜやるか）と `task-after`（完了するとどうなるか）は全タスクに、一目で読める地の文で書く
 - `task-body` 内の `task-desc`／`task-link`／`task-meta`／`task-shot` は省略可。不要なら出力しない
 - 冒頭の「⚡ いまやること」Hero カードはテンプレの JS が未完了の先頭タスクを自動表示する（手動で埋めない）
 - CSS・構成・スクショ埋め込みの正本: `~/.claude/skills/visualize-common/references/`（style-guide.md / action-first.md / screenshot-embed.md）
 - リンクは新規タブで開く（`target="_blank"`）
-- コマンド片を載せたい場合は `<pre class="task-cmd"><code>npm install</code></pre>` を `task-body` 内に入れる
+- **ファイル参照タスク**（「docs/012 の文面を使う」「.env の値を貼る」等、リポジトリ内のファイルを見ながらやる作業）には、`task-body` 内に VS Code オープンボタンを入れる：
+  `<button class="task-vscode" data-path="/Users/you/xxx/docs/012_foo.md" data-line="24">VS Code で開く</button>`
+  - `data-path` は**絶対パス必須**（register した `--project-path` 配下であること。サーバがそれ以外を 403 で拒否する）
+  - `data-line` は任意（該当箇所の行番号）
+  - クリックするとプロジェクトフォルダがワークスペースとして VS Code で開き、該当ファイル・行にジャンプする。サーバ停止時は `vscode://` URL スキームにフォールバックする（この場合フォルダは開かずファイルのみ）
+- コマンド片を載せたい場合は `<pre class="task-cmd"><code>npm install</code></pre>` を `task-body` 内に入れる（右上に「コピー」ボタンがテンプレJSで自動注入され、`<code>` のテキストがクリップボードにコピーされる。複数行コマンドもそのまま可）
 - 入力値の表は `<dl class="task-fields"><dt>フィールド名</dt><dd>入れる値</dd></dl>` で
 
 ---
@@ -187,10 +226,10 @@ description: 実装作業の途中・完了時に、Claude では完結できず
 - 軽量・自己完結（外部 CSS / JS / フォント・CDN は一切使わない）
 - 進捗バーは最上部に sticky 表示。チェックすると即座に伸びる
 - ステージごとに小さい進捗カウンタ（`0/3` のような）を見出し横に出す
-- チェック状態は localStorage に自動保存。リロードしても残る
+- チェック状態は todo-hub サーバに保存し、サーバ停止時は localStorage に保存する。リロードしても残る
 - 「進捗をリセット」ボタンを footer に置く（誤クリック防止に confirm あり）
 - 全タスク完了で「🎉 全タスク完了！」のバナーがふわっと出る
-- 色味は控えめ（**ホワイトベース・デイモード**・グリーン強調。ダークテーマ正本 visualize-common の例外で、配色のみライト・構成語彙は共通）／フォントはシステムデフォルト
+- 色味は控えめ（**ホワイトベース・デイモード**。配色の正本は `assets/kanban-theme.css`。ダークテーマ正本 visualize-common の例外で、配色のみライト・構成語彙は共通）／フォントはシステムデフォルト
 
 これら以上の凝った機能（フィルタ・並べ替え・タグ・締切日・通知）は要求があるまで追加しない。**シンプルさが正義**。
 
@@ -203,4 +242,5 @@ description: 実装作業の途中・完了時に、Claude では完結できず
 - ❌ 「適切に設定する」のような曖昧な動詞を使う
 - ❌ ファイル名に日本語スラッシュや空白を入れる（macOS で `open` が壊れる）
 - ❌ テンプレを毎回作り直す（`assets/template.html` を必ず再利用する）
-- ❌ 進捗を JSON ファイルに書き出すなどの過剰な永続化（localStorage で十分）
+- ❌ サーバ必須にして file:// で開けない HTML を作る（サーバ停止時も localStorage で動くこと）
+- ❌ `register` / state JSON 初期化を忘れる（index に載らず「気付けない TODO」に逆戻りする）

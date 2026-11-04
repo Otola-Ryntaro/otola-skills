@@ -87,7 +87,7 @@ codex/ 配下の成果レポートを読み取り、作業チケットと ticket
 2. **個別チケット生成**: [references/ticket_template.md](references/ticket_template.md) に準拠
 3. **🔒 DB/Migration 依存チェック（MIGRATION-CHECK 義務付け）**:
 
-   2026-04-05 の本番 DB 全消失事故（commit 481362b9 baseline 再構成中に本番 URL で `prisma migrate reset` 相当が走った）を踏まえた再発防止。**プロジェクトに `.claude/skills/migration-check/SKILL.md` が存在する場合のみ有効**。無ければこのステップは noop。
+   本番 URL に向けた `prisma migrate reset` 相当の実行で本番 DB を失うのを防ぐ。**プロジェクトに `.claude/skills/migration-check/SKILL.md` が存在する場合のみ有効**。無ければこのステップは noop。
 
    **3-1. キーワード検出**: 各チケットの `背景` / `作業内容` / `対象ファイル` / `受け入れ条件` を全文 scan し、以下のキーワードのいずれかにヒットするか判定（大文字小文字無視、部分一致）。
    - Prisma 系: `prisma`, `schema.prisma`, `prisma/migrations`, `prisma/schema`, `migrate`, `migration`, `baseline`, `db push`, `db pull`
@@ -96,7 +96,7 @@ codex/ 配下の成果レポートを読み取り、作業チケットと ticket
    - DDL: `ALTER TABLE`, `CREATE TABLE`, `DROP TABLE`, `TRUNCATE`, `DROP SCHEMA`, `CREATE INDEX`, `_prisma_migrations`
    - スキーマ同期: `schema cache`, `NOTIFY pgrst`, `reload schema`
 
-   **3-2. ヒットしたチケットの本文冒頭に強制挿入**（frontmatter の直後、`## 概要` / `## 背景` の直前）:
+   **3-2. ヒットしたチケットの本文冒頭に強制挿入**（メタ情報の箇条書きの直後、`## 背景` の直前）:
 
    ```markdown
    ## 🔒 着手前に必須: MIGRATION-CHECK
@@ -104,17 +104,17 @@ codex/ 配下の成果レポートを読み取り、作業チケットと ticket
    このチケットは **DB / Supabase / Prisma** を触ります。
    **着手前に必ず `Skill(skill: "migration-check")` を呼び出し、Check-1〜6 を全て通過** させてから作業を開始してください。
 
-   - 事故背景: 2026-04-05 に本番 DB 全消失事故（commit 481362b9 baseline 再構成中、本番 URL で `prisma migrate reset` 相当が走った）
+   - 理由: 本番 URL で `prisma migrate reset` 相当が走ると本番 DB が消える
    - スキル本体: `.claude/skills/migration-check/SKILL.md`
    - 関連: `docs/operations/prisma-safety-guardrails.md`
 
    **このブロックを削除・スキップして着手することは禁止**。自信があっても必ず呼ぶ。
    ```
 
-   **3-3. ticket_index.md のチケット行に `🔒` マーカー**: ヒットしたチケットのタイトル前に `🔒` を付与。
+   **3-3. ticket_index.md のチケット行に `🔒` マーカー**: ヒットしたチケットの概要の前に `🔒` を付与。
 
    ```markdown
-   | DB-012 | 🔒 Prisma schema に facility 列追加 | M | HIGH | Phase 2 | ⬜ |
+   | DB-012 | HIGH | ⬜ | 🔒 Prisma schema に facility 列追加 | M |
    ```
 
    **3-4. 凡例追記**: index 表の下に以下の凡例を追加（まだ無ければ）。
@@ -148,7 +148,7 @@ ticket-gen 自体は **/ticket-review を自動実行しない**。ユーザー�
 
 ### Phase 6: USER_GUIDE 更新判定
 
-チケット群の内容が USER_GUIDE に影響するかを判定し、必要に応じて更新する。**USER_GUIDE/ の体系を判定し、汎用版と MEOcli 専用版で処理を分岐する**。
+チケット群の内容が USER_GUIDE に影響するかを判定し、必要に応じて更新する。**USER_GUIDE/ の体系を判定して処理を分岐する**。
 
 #### 6-1. USER_GUIDE 体系の判定（最初に必ず実行）
 
@@ -159,8 +159,6 @@ test -d USER_GUIDE && echo "exists" || echo "none"
 # 汎用版マーカー（user-guide スキル生成）
 test -f USER_GUIDE/00_index.md && echo "generic"
 
-# MEOcli 専用版マーカー（kuchikomi_maker 等の既存運用）
-ls USER_GUIDE/Authentication.md USER_GUIDE/Admin_Setup.md USER_GUIDE/Question_Table.md 2>/dev/null | head -1
 ```
 
 分岐：
@@ -169,8 +167,7 @@ ls USER_GUIDE/Authentication.md USER_GUIDE/Admin_Setup.md USER_GUIDE/Question_Ta
 |------|------|
 | `USER_GUIDE/` なし | スキップ（影響評価のみ報告） |
 | `USER_GUIDE/00_index.md` あり | **汎用版 → 6-2-A（user-guide スキルに委譲）** |
-| `Authentication.md` 等あり | **MEOcli 専用版 → 6-2-B（従来通り直接 Edit）** |
-| 両方ある（移行途中） | 汎用版を優先（6-2-A） |
+| `USER_GUIDE/00_index.md` なし | スキップ（影響評価のみ報告） |
 
 #### 6-2-A: 汎用版（user-guide スキル委譲）
 
@@ -188,43 +185,9 @@ user-guide 側で以下が自動実行される（詳細は `~/.claude/skills/us
 - USER_EDIT マーカー区画は保護
 - 完了報告を返す
 
-ticket-gen の責務は「軽量モードを起動するところまで」。判定結果は完了報告に転記する。
+user-guide スキルが無い環境ではこの手順をスキップする。ticket-gen の責務は「軽量モードを起動するところまで」。判定結果は完了報告に転記する。
 
-#### 6-2-B: MEOcli 専用版（従来通り直接 Edit）
-
-`Authentication.md` `Admin_Setup.md` `Question_Table.md` 等の体系を検出した場合は、ticket-gen が直接 Edit する従来ロジックを使う（kuchikomi_maker 想定）。
-
-##### 影響カテゴリの判定（MEOcli 専用）
-
-生成した全チケットの `背景` `作業内容` `対象ファイル` を分析し、以下のカテゴリに該当するか判定:
-
-| カテゴリ       | 該当する変更例                          | 更新対象                                      |
-| -------------- | --------------------------------------- | --------------------------------------------- |
-| 患者導線       | URL変更、session仕様、QR仕様            | `Overview.md`, `Architecture.md`              |
-| 認証・ロール   | ロール追加/変更、MFA、OAuth             | `Authentication.md`, `Admin_Auth_Identity.md` |
-| 管理画面       | 管理人向け画面追加/変更                 | `Platform_Admin_Guide.md`                     |
-| 院長設定       | 院長向け初期設定変更                    | `Admin_Setup.md`                              |
-| 質問構造       | 質問セットの構造変更                    | `Question_Table.md`                           |
-| アーキテクチャ | レイヤー追加、API構造変更、新サービス層 | `Architecture.md`                             |
-| 新機能ドメイン | 既存ガイドに該当しない新しい概念・機能  | 新規ファイル作成を検討                        |
-
-##### 更新の実行
-
-**影響ありの場合:**
-
-1. 該当する USER_GUIDE ファイルを `Read` で読み込む
-2. チケット内容に基づき、**完了後に反映すべき変更** を特定する
-3. 以下のいずれかを実行:
-   - **既存ファイル更新**: `Edit` で該当セクションを更新。変更箇所にはチケットIDを `<!-- Updated by {PREFIX}-{NNN} -->` コメントで記録
-   - **新規ファイル作成**: 新ドメインの場合、`USER_GUIDE/` に新規 `.md` を作成し、`README.md` の「まず読むもの」テーブルにも追加
-4. 更新内容は **チケットの作業内容が完了した想定** で書く（未完了状態を記述しない）
-5. 大規模な変更が予想される場合は、USER_GUIDE 更新自体を最終Phaseの独立チケットとして生成し、実装完了後に別途実行する方針を取る
-
-**影響なしの場合:**
-
-- 「USER_GUIDE への影響なし」と報告してスキップ
-
-#### 6-3. 判定のガイドライン（両方式共通）
+#### 6-3. 判定のガイドライン
 
 - **更新する**: 外部仕様（URL、ロール、画面フロー）が変わる場合
 - **更新する**: 新しい概念・用語が導入される場合
@@ -274,11 +237,6 @@ ticket-gen 自体は **/ticket-verify を自動実行しない**（チケット�
   - 03_tech_stack.md: 影響あり/なし
   - 06_glossary.md: 影響あり/なし
   - 99_open_questions.md: 影響あり/なし
-
-**MEOcli 専用版（Authentication.md 等あり）の場合:**
-- 更新: `USER_GUIDE/Authentication.md` — ロール定義にXXXを追加
-- 新規: `USER_GUIDE/Onboarding.md` — オンボーディングフローの説明
-- スキップ: 内部リファクタリングのみ、外部仕様への影響なし
 
 **USER_GUIDE/ なしの場合:**
 - スキップ。「`/user-guide` で初回生成を検討」と案内

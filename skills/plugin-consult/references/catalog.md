@@ -82,10 +82,10 @@ DWH コネクタがあると強いが、ローカル CSV / SQLite でも使え�
 
 ## small-business — 事業運営ワークフロー（コネクタ依存が強い）
 
-QuickBooks・PayPal・HubSpot・Canva 等の接続前提のものが多い。約30スキル。
-代表: monday-brief / friday-brief（週次ブリーフ）、cash-flow-snapshot、close-month（月次締め）、
-plan-payroll、invoice-chase、price-check / margin-analyzer、review-contract（契約レビュー）、
-run-campaign、lead-triage / crm-cleanup、tax-prep、handle-complaint。
+QuickBooks・PayPal・HubSpot・Canva 等の接続前提のものが多い。40 以上のスキルがある。
+代表: monday-brief（週次ブリーフ）、cash-flow-snapshot、close-month（月次締め）、
+plan-payroll、invoice-chase、contract-review（契約レビュー）、
+lead-triage、crm-autopilot、tax-prep。
 入口: /smb-onboard（コネクタ接続）、smb-router（振り分け）。
 
 ## canva — Canva 連携（MCP: https://mcp.canva.com/mcp、初回 OAuth 必要）

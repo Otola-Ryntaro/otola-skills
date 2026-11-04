@@ -14,6 +14,17 @@
   ※ wiki 系（wiki-common）は JS 完全禁止のライトテーマで、本正本の対象外。
 - レスポンシブ: `@media(max-width:720px)` でグリッドを 1 カラム化。
 
+## グラフ・チャート規約（~/.claude/rules/charts.md 準拠）
+
+可視化 HTML の中にデータグラフ（棒・折れ線・環・ドット・ヒートマップ等）を置くときは、
+`~/.claude/rules/charts.md` の「自己完結 HTML」の行に従い、手書きインライン SVG で描く。
+
+- 図型の選び方・色数・直接ラベル・日本語表記は charts.md の共通ルールに従う（Claude は組み込み `dataviz` スキルの方法論も使う）
+- **本正本は CDN 禁止**なので、React 系（tremor / bklit-ui / evilcharts）や CDN 読み込みのライブラリは使わない
+- フロー図などの図解は beautiful-mermaid で SVG を事前生成し、その SVG 文字列を埋め込んでよい
+- 色は本正本の `:root` 変数に置き換える。基本は `--txt` / `--mute` / `--line` の濃淡で、強調 1 色は各スキルの accent
+- 図の出典欄（`.src`）に道具と図型を残す（例: `手書き SVG 折れ線`）
+
 ## `:root` 変数（正本ブロック — 各テンプレはこれをコピーする）
 
 ```css
@@ -26,7 +37,7 @@
 ```
 
 - `--accent` のみスキル固有色に変更してよい（shime `#c084fc` / user-guide `#5eead4` /
-  source-explainer はドメイン別 / manual-todo `#4ade80`）。他の変数は変更しない。
+  source-explainer はドメイン別。manual-todo はライトテーマの例外で `assets/kanban-theme.css` が正本）。他の変数は変更しない。
 
 ## 基本タイポグラフィ
 

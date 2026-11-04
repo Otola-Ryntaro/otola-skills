@@ -69,6 +69,9 @@
   .foot{margin-top:50px;padding-top:18px;border-top:1px solid var(--line);color:var(--sub);font-size:12.5px}
   hr{border:none;border-top:1px dashed var(--line);margin:26px 0}
   .kicker{color:var(--accent);font-size:12.5px;letter-spacing:.18em;text-transform:uppercase}
+  .hub-link{float:right;font-size:12.5px;color:var(--sub);text-decoration:none;
+    padding:4px 12px;border:1px solid var(--line);border-radius:999px;background:var(--card)}
+  .hub-link:hover{color:var(--accent2);border-color:var(--accent2)}
   .quote{border-left:3px solid var(--accent);padding:4px 14px;margin:14px 0;color:var(--sub);font-style:italic;background:rgba(192,132,252,.04)}
   .check{color:var(--good);font-weight:700}
   .cross{color:var(--bad);font-weight:700}
@@ -90,11 +93,37 @@
     border-radius:12px;padding:10px;overflow:hidden}
   .shots img{width:100%;height:auto;border-radius:8px;display:block;cursor:zoom-in}
   .shots figcaption{color:var(--sub);font-size:12.5px;margin-top:8px;line-height:1.5}
+  /* ロードマップ現在地（横軸タイムライン）。docs/MILESTONES.md があるときのみ使用 */
+  .roadmap{overflow-x:auto;padding:6px 2px 2px}
+  .rm-track{display:flex;gap:0;align-items:flex-start;min-width:max-content}
+  .rm-item{display:flex;flex-direction:column;align-items:center;min-width:170px;max-width:230px}
+  .rm-here{height:22px;font-size:13px;font-weight:700;color:var(--gold);letter-spacing:.05em;
+    display:flex;align-items:flex-end;justify-content:center;white-space:nowrap}
+  .rm-box{width:92%;background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:10px 12px;text-align:center;position:relative}
+  .rm-box .m{font-size:11.5px;color:var(--sub);letter-spacing:.1em}
+  .rm-box .t{font-weight:700;font-size:14px;margin-top:2px}
+  .rm-box .st{font-size:11.5px;margin-top:4px;color:var(--sub)}
+  .rm-item.done .rm-box{border-color:rgba(52,211,153,.5);background:rgba(52,211,153,.07)}
+  .rm-item.done .rm-box .st{color:var(--good)}
+  .rm-item.now .rm-box{border-color:var(--accent);background:rgba(192,132,252,.10);
+    box-shadow:0 0 0 1px var(--accent)}
+  .rm-item.now .rm-box .st{color:var(--accent)}
+  .rm-item.future{opacity:.45}
+  .rm-arrow{align-self:center;margin-top:22px;color:var(--sub);font-size:16px;padding:14px 2px 0}
+  .rm-tasks{width:92%;margin-top:8px;font-size:12.5px}
+  .rm-tasks summary{cursor:pointer;color:var(--sub);font-size:12px;list-style:none;text-align:center}
+  .rm-tasks summary::before{content:"▸ "}
+  .rm-tasks[open] summary::before{content:"▾ "}
+  .rm-tasks ul{list-style:none;padding:6px 4px 0;margin:0;text-align:left}
+  .rm-tasks li{margin:3px 0;color:var(--sub)}
+  .rm-tasks li.on{color:var(--txt)}
 </style>
 </head>
 <body>
 <div class="wrap">
 
+  <a class="hub-link" href="file:///Users/you/dev/todo/reports.html">📊 作業ログハブへ</a>
   <div class="kicker">セッション更新レポート</div>
   <h1>{{TITLE}}</h1>
   <p class="lead">{{ONE_LINE_SUMMARY}}</p>
@@ -127,6 +156,41 @@
       <img src="data:image/png;base64,{{BASE64_1}}" alt="{{ALT_1}}">
       <figcaption>{{CAPTION_1 — 何の画面で何が確認できるか 1 文}}</figcaption>
     </figure>
+  </div>
+
+  <!-- ロードマップ現在地（docs/MILESTONES.md があるときのみ。無ければセクションごと省略）
+       - Step 3.5-A の更新（チェック・現在地移動）を済ませた最新状態を反映すること
+       - .rm-item の class: done=完了 / now=進行中(rm-here に ▼) / future=未来
+       - .rm-tasks は進行中のみ open、他はデフォルト閉 -->
+  <h2><span class="n">0R</span>ロードマップ現在地</h2>
+  <p>{{ROADMAP_INTRO — 大ゴール一文と、今回の作業がどのマイルストーンを進めたか 2〜3 文}}</p>
+  <div class="roadmap">
+    <div class="rm-track">
+      <div class="rm-item done">
+        <div class="rm-here"></div>
+        <div class="rm-box"><div class="m">M1</div><div class="t">{{M1_TITLE}}</div><div class="st">✅ 完了 {{M1_DATE}}</div></div>
+        <details class="rm-tasks"><summary>タスク</summary><ul>
+          <li>☑ {{TASK}}</li>
+        </ul></details>
+      </div>
+      <div class="rm-arrow">→</div>
+      <div class="rm-item now">
+        <div class="rm-here">▼ 今ここ</div>
+        <div class="rm-box"><div class="m">M2</div><div class="t">{{M2_TITLE}}</div><div class="st">▶ 進行中（{{DONE}}/{{TOTAL}}）</div></div>
+        <details class="rm-tasks" open><summary>タスク</summary><ul>
+          <li>☑ {{DONE_TASK}}</li>
+          <li class="on">☐ {{REMAINING_TASK}}</li>
+        </ul></details>
+      </div>
+      <div class="rm-arrow">→</div>
+      <div class="rm-item future">
+        <div class="rm-here"></div>
+        <div class="rm-box"><div class="m">M3</div><div class="t">{{M3_TITLE}}</div><div class="st">未着手</div></div>
+        <details class="rm-tasks"><summary>タスク</summary><ul>
+          <li>☐ {{TASK}}</li>
+        </ul></details>
+      </div>
+    </div>
   </div>
 
   <h2><span class="n">01</span>今日やったこと</h2>

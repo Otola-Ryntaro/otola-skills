@@ -48,7 +48,7 @@ cat .mcp.json 2>/dev/null
 
 ### 1-2. 更新モデルで分類
 
-各サーバの起動コマンドを見て 4 タイプに分類する:
+各サーバの起動コマンドを見て 5 タイプに分類する:
 
 | タイプ | 判定基準 | 更新確認 |
 |---|---|---|
@@ -121,7 +121,7 @@ done
 
 ```bash
 claude plugin marketplace update <marketplace名>   # または引数なしで全部
-claude plugin install <plugin>@<marketplace>        # 再インストールで最新化
+claude plugin update <plugin>@<marketplace>         # インストール済みの最新化（install は「already installed」で止まり更新されない）
 ```
 
 ## Phase 3: スキル

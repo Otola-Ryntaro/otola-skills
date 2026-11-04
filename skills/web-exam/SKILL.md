@@ -34,7 +34,7 @@ Browser Use CLI (`~/.browser-use-env/bin/browser-use`) を使用したブラウ�
 - [x] コンソールエラー監視
 - [x] パフォーマンス計測 (TTFB, FCP, CLS, リソース分析)
 - [x] アクセシビリティチェック (11項目)
-- [x] SEO チェック (11項目)
+- [x] SEO チェック (13項目)
 - [x] セキュリティチェック (8項目)
 - [x] ページ監査 (画像・リンク・DOM)
 
@@ -54,14 +54,14 @@ Browser Use CLI (`~/.browser-use-env/bin/browser-use`) を使用したブラウ�
 1. `date +%Y%m%d` で日付取得
 2. フロー記述から短い英語 description を生成
 3. `output/browser-exam/YYYYMMDD_<description>/` を作成（同名は `_v2` 等を付与）
-4. `BU=~/.browser-use-env/bin/browser-use` をエイリアスとして使用
+4. シェル変数は Bash の呼び出し間で残らない。このスキルの `$BU` は `~/.browser-use-env/bin/browser-use` の略記で、実行時は毎回この実パスに置き換えて書く（または同じ呼び出しの先頭に `BU=~/.browser-use-env/bin/browser-use;` を付ける）。`BU` が未定義のまま `$BU open` を実行すると macOS の `open` が動く
 
 ### Phase 1: 環境検出
 ```bash
 curl -s -o /dev/null -w "%{http_code}" http://localhost:3000
 ```
 - 200系 → `http://localhost:3000`（ローカル）
-- それ以外 → `https://app.meocli.com`（本番）
+- それ以外 → 検証先の URL をユーザーに確認する（本番へ自動で切り替えない）
 - 報告: `環境: local / production`
 
 ### Phase 2: ブラウザ起動 & モニター注入
@@ -74,7 +74,6 @@ $BU eval "$(cat ~/.claude/skills/web-exam/scripts/inject-monitors.js)"
 
 ### Phase 3: フロー実行（スクリーンショット付き）
 ユーザーの自然言語フロー記述を操作ステップに分解し、各ステップで **ステップ実行サイクル** を回す。
-**スクリーンショットは各ステップで必ず撮影する。**
 フロー参照 → [references/flows.md](references/flows.md)
 
 ### Phase 4: 自動チェック実行
@@ -110,7 +109,7 @@ $BU close
 
 ## ステップ実行サイクル
 
-各操作ステップで以下を **必ず** 回す:
+各操作ステップで以下を回す（待機は動的コンテンツがあるときだけ）:
 
 ### 1. State（現在状態の把握）
 ```bash
@@ -139,7 +138,7 @@ $BU wait selector ".spinner" --state hidden  # 要素消滅待機
 ```bash
 $BU screenshot output/browser-exam/YYYYMMDD_<desc>/NNN_<step>.png
 ```
-**スクリーンショットの省略は不可。** 全ステップで撮影し、レポートに一覧化する。
+全ステップで撮影し、レポートに一覧化する。画像がレビューの根拠になるので省略しない。
 
 ### 5. 状態確認
 - エラーが疑われる場合 → `$BU eval "JSON.stringify(window.__bu_monitors.errors)"` で即時確認
@@ -152,15 +151,15 @@ $BU screenshot output/browser-exam/YYYYMMDD_<desc>/NNN_<step>.png
 
 ## 認証ハンドリング
 
-### 患者フロー（認証なし）
-`/s/{slug}` からアクセス → そのままフロー実行
+### 公開フロー（認証なし）
+公開 URL からアクセス → そのままフロー実行
 
-### 管理画面（Supabase Auth）
+### 管理画面（ログインあり）
 ```
 管理画面へのログインが必要です。
 1. メールアドレス
 2. パスワード
-3. テスト用クリニックのslug (あれば)
+3. テスト用データの識別子 (あれば)
 ```
 
 ### Real Chrome プロファイル利用

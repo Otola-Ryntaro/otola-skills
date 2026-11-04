@@ -117,7 +117,7 @@ verdict: REQUEST_CHANGES / APPROVE
 critical: <n> / major: <n> / minor: <n>
 
 要旨:
-<3〜5 行の要約>
+<判定の理由と修正の要点。詳細は review_path に任せる>
 
 Critical / Major を修正のうえ再送してください。修正不要の Minor は残置可。
 ```
@@ -168,7 +168,7 @@ git diff <base>..HEAD -- <対象ファイル群>
 
 差分行数が 2000 行を超えたら:
 - 要点抽出 + 個別ファイル単位で `Read`
-- 大きい場合は `superpowers:code-reviewer` サブエージェントに委譲（並列 Agent 呼び出し）
+- 大きい場合は `feature-dev:code-reviewer` エージェントに委譲（並列 Agent 呼び出し）
 
 ### F-3. Strict 判定
 
@@ -272,7 +272,7 @@ verdict: REQUEST_CHANGES / APPROVE
 critical: <n> / major: <n> / minor: <n>
 
 要旨:
-<3〜6 行>
+<判定の理由と修正の要点。詳細は review_path に任せる>
 
 次 Phase 進行前に Critical / Major を修正してください。
 ```
@@ -291,7 +291,7 @@ CC は他のタスクを兼任できる。Phase F は idempotent で、複数 Ph
 
 ### F-10. Long-running セッション対策
 
-セッションが長引くと Monitor が停止する場合がある。Phase F 待機中に定期的に `inbox.sh` を呼び、取りこぼしがないか確認する。
+待機の手順は `orca-protocol.md` の 7 節に従う。待機が止まっていても、再開時に `inbox.sh` を 1 回実行すれば取りこぼしは回収できる。
 
 ---
 
@@ -303,7 +303,7 @@ Subject: `goal-feed final review request`
 
 期待される Body 項目:
 - `ticket_index`: パス
-- `verification`: `/ticket-verify` レポートパス（例: `codex/${YYYYMMDD}_verification_report.md`）
+- `verification`: `/ticket-verify` レポートパス（例: `codex/${YYYYMMDD}_<tickets-dir名>_verification_report.md`）
 - 全 Phase 完了サマリ
 - 残リスク列挙
 
@@ -389,34 +389,32 @@ final_audit_path: codex/reviews/${DATE_YYYYMMDD}_${SLUG}_final_audit.md
 verdict: PASS / CONDITIONAL PASS / FAIL
 
 要旨:
-<5〜10 行>
+<判定の理由と残課題の要点。詳細は final_audit_path に任せる>
 
 CC 側はこの後 /shime に移ります。
 ```
 
 ### G-5b. Worktree Cleanup Decision Gate（必須 — /shime より前に実行）
 
-goal の作業が専用 worktree（feature/task 用のリンク worktree）で行われた場合、**このゲートを飛ばして G-6 に進んではならない**。worktree を作った側が最後まで面倒を見る、が本ゲートの契約（作成側と完了側の契約断絶を防ぐ）。
+**このゲートを飛ばして G-6 に進んではならない。** worktree を作った CC が最後まで面倒を見る。orca-master 配下なら判断はマスターの Step 5 に任せ、Codex を閉じる手順 1 だけ行って `orca-master report` で完了を伝える。
 
-**対象外（絶対に触らない）**: primary worktree（リポジトリ本体、main/master/develop 等をチェックアウトしている作業ツリー）。lock / unlock / remove のいずれも行わない。
+**対象外（絶対に触らない）**: primary worktree（リポジトリ本体）。
 
-1. **対象特定**: `git worktree list --porcelain` で対象 worktree の exact path / branch / locked 状態を取得する。
+1. **Codex を先に閉じる**: 件名 `goal-feed session closed` を送って起こす（本文は「最終監査完了。コミット漏れがないか確かめ、/goal を complete にして止まって」）。`orca terminal wait --for tui-idle` で止まったのを確かめる。worktree を消す前に閉じないと、Codex の作業場所が先に無くなる。
 2. **ユーザー選択**（`AskUserQuestion`、4 択）:
    - `integrate` — main へ統合済み（または今統合する）。worktree と branch を後片付け
-   - `PR` — PR を出して worktree は保持（lock 維持）
-   - `park` — 作業保留で worktree 保持（lock 維持）
+   - `PR` — PR を出して worktree は保持
+   - `park` — 作業保留で worktree 保持
    - `abandon` — 成果破棄で後片付け
-3. **integrate / abandon の場合のみ**、以下の順序を厳守（順序の入れ替え禁止）:
-   1. 検証: dirty なし（`git status --porcelain`）／integrate なら main にマージ済み（`git merge-base --is-ancestor HEAD main`）／exact path が想定と一致／その worktree で稼働中プロセスなし
-   2. 実行予定コマンドをそのまま表示: `git worktree unlock <exact-path>` → `git worktree remove <exact-path>`
-   3. **ユーザーの明示承認を取る**（承認前の unlock は禁止）
-   4. 承認後、手順 1 を**再検証**
-   5. `git worktree unlock <exact-path>` → **直ちに** `git worktree remove <exact-path>`
-   6. remove 失敗時は best-effort で即 `git worktree lock <exact-path>` し直し、「要手動確認」とユーザーに報告して停止
-4. **branch 削除は別承認**: remove 成功後、`git branch -d <branch>` を別途提示し、承認を得てから実行する。
-5. **PR / park の場合**: lock を維持したまま終了し、/shime の Plans.md 引き継ぎに「park 中 worktree: <path>（branch, 理由）」を必ず記録する。
-6. `rm -rf` での worktree 削除は**いかなる場合も禁止**。必ず `git worktree remove` を使う。
-7. 判断に迷う worktree（unmanaged / 別 reason で locked / detached）は削除候補にせず「要確認」としてユーザーに列挙するだけに留める。
+3. **integrate / abandon の場合のみ**、以下の順序を厳守:
+   1. 検証: dirty なし（`git -C <task_worktree> status --porcelain`）／integrate なら統合先にマージ済み（`git -C <task_worktree> merge-base --is-ancestor HEAD <base>`）／abandon なら失われるコミットを列挙して示す
+   2. `orca terminal close --worktree id:<worktree_id> --all --json` でターミナルを閉じる
+   3. 次のコマンドをコピー可能な形で提示し、ユーザーに `!` で実行してもらう: `orca worktree rm --worktree id:<worktree_id> --json`（dirty な abandon はユーザーが明示したときだけ `--force` を付ける）
+   4. 実行後、`git worktree list` で消えたことを確かめる
+4. **branch 削除は別承認**: `git branch -d <branch>` を提示する。
+5. **agmsg の名前を外す**（integrate / abandon のとき。worktree が消えたのを確かめてから）: `leave.sh <TEAM> <slug>-codex`、`leave.sh <TEAM> <slug>-cc`。
+6. **PR / park の場合**: worktree と名前を残し、カードを `--workspace-status in-review` にする。/shime の Plans.md 引き継ぎに「park 中 worktree: <path>（branch, 理由）」を必ず記録する。
+7. `rm -rf` での worktree 削除は**いかなる場合も禁止**。
 
 ### G-6. /shime 起動
 
@@ -431,13 +429,6 @@ Skill(skill: "shime")
 - Plans.md への引き継ぎを対話的に確認
 - 可視化オプション（--visualize）を確認
 
-`/shime` 完了後、Codex 側で `/goal` を complete マークしてもらうよう最終 agmsg で促す:
-
-```
-Subject: goal-feed session closed
-Body: /shime 完了。日報 <path>。Codex 側で /goal を complete にしてください。
-```
-
 ### G-7. Phase G の総括
 
 - TaskUpdate で全 Phase を completed に。
@@ -450,6 +441,10 @@ Body: /shime 完了。日報 <path>。Codex 側で /goal を complete にして�
 ---
 
 ## Cross-Phase 共通事項
+
+### 作業場所
+
+本書の git コマンドとファイルパスは `<task_worktree>` を基準にする。CC が本体のペインにいるときは `git -C <task_worktree> ...` と絶対パスで実行する（`orca-protocol.md` 3 節）。
 
 ### 出力ファイルの命名規則
 
@@ -466,7 +461,7 @@ Body: /shime 完了。日報 <path>。Codex 側で /goal を complete にして�
 ### agmsg 送受信の共通ルール
 
 - 送信は必ず `send.sh` 経由。DB / files を直接触らない。
-- 受信は agmsg monitor が push で配信。念のため 3〜5 turn ごとに `inbox.sh` を能動チェック。
+- 受信は相手に起こされたとき、または `orca-protocol.md` 7 節の待機が戻ったときに `inbox.sh` で確認する。自動配信には頼らない。
 - Subject の strict prefix マッチで review request 判定。曖昧なら AskUserQuestion。
 
 ### 「本質修正」観点の共通判定

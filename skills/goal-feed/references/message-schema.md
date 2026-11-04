@@ -30,7 +30,7 @@ Codex 側 `~/.codex/skills/goal-feed/SKILL.md` および `~/.codex/skills/goal-f
 入力: <source report or brief>
 
 CC側の初期方針:
-<short summary 5-8 行>
+<Codex が独立に検討できる範囲で短く>
 
 重視してほしい観点:
 - 有料サービスとしてユーザーがお金を払える品質に届くか
@@ -77,7 +77,7 @@ verdict: REQUEST_CHANGES / APPROVE
 critical: <n> / major: <n> / minor: <n>
 
 要旨:
-<3〜5 行>
+<判定の理由と修正の要点。詳細は review_path に任せる>
 
 Critical / Major を修正のうえ再送してください。
 修正不要の Minor は残置可。
@@ -98,7 +98,7 @@ verdict: REQUEST_CHANGES / APPROVE
 critical: <n> / major: <n> / minor: <n>
 
 要旨:
-<3〜6 行>
+<判定の理由と修正の要点。詳細は review_path に任せる>
 
 次 Phase 進行前に Critical / Major を修正してください。
 ```
@@ -116,24 +116,22 @@ final_audit_path: codex/reviews/{YYYYMMDD}_{SLUG}_final_audit.md
 verdict: PASS / CONDITIONAL PASS / FAIL
 
 要旨:
-<5〜10 行>
+<判定の理由と残課題の要点。詳細は final_audit_path に任せる>
 
 CC 側はこの後 /shime に移ります。
 ```
 
 ### 6. Session Closed（最終アナウンス）
 
-**トリガー**: Phase G-6 の後
-**Subject**: `goal-feed session closed`
+**トリガー**: Phase G-5b の手順 1（worktree の片付けより先に Codex を閉じる）
+**Subject**: `goal-feed session closed`（`-impl` 版は `goal-feed-impl` prefix）
 **Body テンプレ**:
 
 ```text
 件名: goal-feed session closed
 
-daily_report: daily_report/{YYYY-MM-DD}_{title}.md
-Plans.md 引き継ぎ: 記録済み
-
-CC 側の作業は完了しました。Codex 側で /goal を complete マークしてください。
+最終監査完了。コミット漏れがないか確かめ、/goal を complete にして止まってください。
+日報と Plans.md の引き継ぎは CC 側で行います。
 ```
 
 ---
@@ -207,14 +205,14 @@ CC 側 skill が自動処理する subject 一覧。それぞれの Body 期待�
 
 ## Non-goal-feed メッセージの扱い
 
-- subject が `goal-feed` / `goal-feed-impl` prefix を持たないメッセージは通常配信のまま。
+- subject が `goal-feed` / `goal-feed-impl` prefix を持たないメッセージは自動処理しない。
 - 本 skill は関与せず、ユーザーが手動で応答する。
 
 ---
 
 ## Skill 未発動時の扱い
 
-セッション内で本 skill が発動していない（`activated: false`）状態では、上記 A〜D の subject が届いても**自動処理しない**。誤動作防止のため、通常配信のまま扱い、ユーザーに「`goal-feed` skill を発動しますか？」と会話上で提案する程度に留める。
+セッション内で本 skill が発動していない（`activated: false`）状態では、上記 A〜D の subject が届いても**自動処理しない**。誤動作防止のため、ユーザーに「`goal-feed` skill を発動しますか？」と会話上で提案する程度に留める。
 
 ---
 
@@ -233,12 +231,11 @@ CC 側 skill が自動処理する subject 一覧。それぞれの Body 期待�
 # チーム構成
 ~/.agents/skills/agmsg/scripts/team.sh "$TEAM"
 
-# identity
-~/.agents/skills/agmsg/scripts/whoami.sh "$(pwd)" claude-code
 ```
 
-- Body は Bash の quoted string 内で通ることを確認。特殊文字は必要に応じてエスケープ。
-- 長文は改行を含む文字列として直接渡す（`send.sh` はそのまま保存する）。
+- `$AGENT` は `<slug>-cc`、`$CODEX_PEER` は `<slug>-codex`（`orca-protocol.md` 4 節）。`whoami.sh` は使わない。
+- 送ったら相手を起こす（`orca-protocol.md` 6 節）。
+- Body にバッククォートを入れない。長文はファイルに書いて `"$(cat <file>)"` で渡す。
 - 添付ファイルは絶対パスで body 内に明記。
 
 ---

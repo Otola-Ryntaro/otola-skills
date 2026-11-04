@@ -20,7 +20,6 @@ $ARGUMENTS が指定されている場合はその範囲のみ。指定がない
 ### Phase 1.5: Spec Compliance Check（`--spec <ticket-path>` 指定時のみ）
 
 **役割:** チケットの受け入れ条件と実装 diff を照合し、missing / extra / misunderstanding を検出する。
-superpowers の spec-reviewer subagent を軽量化したインライン版。
 
 **手順:**
 
@@ -60,7 +59,7 @@ superpowers の spec-reviewer subagent を軽量化したインライン版。
 
 ### Phase 1.7: Root-Cause 分析（Critical / Major のバグ系指摘に必須）
 
-**役割:** 症状パッチを防ぎ、根本原因側に修正を出させる品質層。goal-feed の「本質修正を最優先」思想を日常導線に降ろしたもの。
+**役割:** 症状パッチを防ぎ、根本原因側に修正を出させる品質層。
 
 Phase 1 / 1.5 で検出した Critical・Major のうち**バグ系**（ロジックバグ、データ不整合、セキュリティ、本番障害系）の指摘それぞれに、以下3点を1行ずつ明記する:
 
@@ -81,9 +80,9 @@ Phase 1 / 1.5 で検出した Critical・Major のうち**バグ系**（ロジ�
 | 手段                                            | ツール                               | 適用場面                                 | トークンコスト        |
 | ----------------------------------------------- | ------------------------------------ | ---------------------------------------- | --------------------- |
 | **A. harness-review** (デフォルト)              | `/harness-review code` スキル        | 4観点構造化レビュー + verdict判定        | 低（Claude内部）      |
-| **B. Claude サブエージェント** (`--subagent`)   | `superpowers:code-reviewer` Agent    | harness外の軽量レビュー                  | 低（Claude内部）      |
-| **C. Codex プラグインレビュー** (`--codex`)     | `/codex:review` コマンド             | OpenAI モデルによるセカンドオピニオン    | 高（OpenAI トークン） |
-| **D. Codex 設計挑戦レビュー** (`--adversarial`) | `/codex:adversarial-review` コマンド | 設計判断・トレードオフを問う深いレビュー | 高（OpenAI トークン） |
+| **B. Claude サブエージェント** (`--subagent`)   | `feature-dev:code-reviewer` Agent    | harness外の軽量レビュー                  | 低（Claude内部）      |
+| **C. Codex CLI レビュー** (`--codex`)           | `codex exec review`                  | OpenAI モデルによるセカンドオピニオン    | 高（OpenAI トークン） |
+| **D. Codex 設計挑戦レビュー** (`--adversarial`) | `codex exec review` + 指示文         | 設計判断・トレードオフを問う深いレビュー | 高（OpenAI トークン） |
 | **E. Codex MCP直接** (`--codex-mcp`)            | `mcp__codex-cli__review` MCP ツール  | コミット/ブランチ指定の軽量レビュー      | 高（OpenAI トークン） |
 | **F. スキップ** (`--skip-so`)                   | なし                                 | ドキュメントのみ・軽微な変更             | なし                  |
 
@@ -99,34 +98,20 @@ Phase 1 / 1.5 で検出した Critical・Major のうち**バグ系**（ロジ�
 
 #### B. Claude サブエージェント（`--subagent`）
 
-`superpowers:code-reviewer` サブエージェントを起動し、差分をレビューさせる。
+`feature-dev:code-reviewer` サブエージェントを起動し、差分をレビューさせる。
 
 - Claude のコンテキスト内で完結するため、外部トークン消費なし
 
-#### C. Codex プラグインレビュー（`--codex`）
+#### C. Codex CLI レビュー（`--codex`）
 
-**重要: `mcp__codex-cli__review` MCP ツールを直接呼ばないこと。必ず Skill ツールで `/codex:review` を呼ぶ。**
+`codex-second-opinion` の Pattern 1-A に従い、Bash で `codex exec review --ephemeral` を実行する。`/codex:review` はモデルから呼べないプラグインコマンドなので使わない。MCP は常駐サーバーを残すためこの手段では使わない。
 
-```
-Skill ツールを使用:
-  skill: "codex:review"
-  args: "--wait"
-```
-
-- Skill ツール経由で `/codex:review` プラグインコマンドを実行する
-- `--wait` でフォアグラウンド実行（結果を待つ）
 - 出力はそのまま表示する（要約・改変しない）
-- Codex プラグインが利用不可の場合のみ `mcp__codex-cli__review`（手段E）にフォールバック
+- `codex` CLI が利用不可の場合のみ `mcp__codex-cli__review`（手段E）にフォールバック
 
 #### D. Codex 設計挑戦レビュー（`--adversarial`）
 
-**重要: 必ず Skill ツールで `/codex:adversarial-review` を呼ぶ。**
-
-```
-Skill ツールを使用:
-  skill: "codex:adversarial-review"
-  args: "--wait"
-```
+`codex-second-opinion` の Pattern 1-B に従い、指示文つきの `codex exec review --ephemeral` を Bash で実行する。
 
 - 通常レビューより深く、設計判断・トレードオフ・前提条件を問う
 - 実装の正しさだけでなく「このアプローチが正しいか」を検証する
@@ -196,7 +181,7 @@ Skill ツールを使用:
 
 ## 再発防止の還流（Critical 修正完了後）
 
-Critical 指摘の修正が完了したら、再発可能性のあるパターン（同種のコードが他所にもある／将来また書きそうなミス）かを判定し、該当する場合は `.claude/error-patterns/` への蓄積を**ユーザーに提案**する（mine-check Phase F-2 と同形式・同テンプレート）。
+Critical 指摘の修正が完了したら、再発可能性のあるパターン（同種のコードが他所にもある／将来また書きそうなミス）かを判定し、該当する場合は `.claude/error-patterns/` への蓄積を**ユーザーに提案**する。
 
 - 対象: Phase 1.7 で根本原因まで特定できたバグ系 Critical
 - 提案内容: パターン名（slug）、1行説明、検出方法（grep パターン等）、根本原因の要約
@@ -208,8 +193,8 @@ Critical 指摘の修正が完了したら、再発可能性のあるパター�
 
 ```
 /cr                      → Claude自己レビュー + harness-review（4観点構造化）
-/cr --subagent           → Claude自己レビュー + superpowers:code-reviewer
-/cr --codex              → Claude自己レビュー + Codex プラグインレビュー
+/cr --subagent           → Claude自己レビュー + feature-dev:code-reviewer
+/cr --codex              → Claude自己レビュー + Codex CLI レビュー
 /cr --adversarial        → Claude自己レビュー + Codex 設計挑戦レビュー
 /cr --codex-mcp          → Claude自己レビュー + Codex MCP直接レビュー
 /cr --skip-so            → Claude自己レビューのみ
@@ -222,3 +207,7 @@ Critical 指摘の修正が完了したら、再発可能性のあるパター�
 ```
 
 > **/ko --strict 自動連携**: strict モードで実行されたチケットの完了時、`/ko` は自動で `/cr --spec <ticket-path>` を呼び出します。
+
+> **スクショ推奨**: レビュー対象に UI 変更が含まれる場合、実画面スクショを `output/` 配下
+> （`output/playwright/YYYYMMDD_*/NNN_*.png` 等）へ保存しておくと、`/shime --visualize` の
+> 「本日のスクショ」ギャラリーに自動収集され、日報で変化を画像確認できる。

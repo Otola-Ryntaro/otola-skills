@@ -97,7 +97,20 @@ Phase 7: /ko + /next で段階実装
    - **MVP**: 最小動作に必要な機能 / やらないこと（Out of scope）
    - **技術**: 希望スタック（未定なら Phase 3 で提案）
    - **非機能**: スケール / セキュリティ / 予算 / 期限
-4. 回答を要件ドラフトとしてメモリ（書き出さない）に保持
+4. **大ゴール設定（ロードマップの起点）**: brainstorming の対話が一巡したら、
+   AskUserQuestion で「このプロジェクトの最終到達点（大ゴール）」を確定する。
+   大ゴールは MVP 完成ではなく、その先の**商用化・公開レベル**を指す。選択肢の例:
+   - プロトタイプを販売し、Web に掲載して販売網を構築する
+   - Steam / ストアで一般販売する
+   - SaaS として月額課金で公開する
+   - 社内・個人利用で完成させる（商用化しない）
+   （＋Other で自由記述。プロジェクトの性質に合わせて選択肢は組み替える）
+5. 大ゴールが決まったら、そこまでの道のりを**マイルストーン（M1〜Mn）**に分割した
+   ロードマップ草案をドラフトし、ユーザーに提示して合意を取る。
+   - 粒度は**事業段階レベル**（例: M1 プロトタイプ完成 → M2 MVP 公開 → M3 商用化準備 → M4 販売開始）
+   - 1 マイルストーン ≒ goal-feed の実行 1〜数回分。ticket-gen / goal-feed のチケット Phase より上位の区切り
+   - 各マイルストーンに完了条件を 1 行付ける
+6. 回答（要件ドラフト＋大ゴール＋ロードマップ草案）をメモリ（書き出さない）に保持
 
 Plan モードは **Phase 3 終了まで維持**。
 
@@ -129,7 +142,7 @@ Plan モードは **Phase 3 終了まで維持**。
 ### 手順
 1. `Skill` ツールで `find-skills` を起動し、要件に合うスキルを探索
 2. MCP 候補を列挙（Context7 / Magic / Sequential / Playwright / Serena / Morphllm / codex-cli / chrome-devtools 等）
-3. サブエージェント候補を列挙（frontend-architect / backend-architect / database-optimizer / security-auditor / test-automator 等）
+3. 現在のセッションで使えるサブエージェントから候補を列挙
 4. **各候補を 3 軸でスコアリング**:
    - マッチ度 (0–5)
    - 使用頻度期待値 (0–5)
@@ -150,7 +163,18 @@ Plan モードは **Phase 3 終了まで維持**。
 1. 定義書を書き出す
    - パス: `docs/YYYY-MM-DD_First_definition.md`（実行日の ISO 日付）
    - テンプレ: [references/templates/first-definition.md](references/templates/first-definition.md) をコピー＋埋め込み
-2. `CLAUDE.md` を**分岐処理**で整備（詳細は下記「CLAUDE.md 取扱いルール」）
+1b. **ロードマップ・マイルストーンの正本を書き出す**（Phase 1 の大ゴール＋草案から）
+   - `USER_GUIDE/ROADMAP.md` ← [references/templates/roadmap.md](references/templates/roadmap.md)。
+     大ゴール・背景・M1〜Mn の定義と完了条件。基本的に不変の文書
+   - `docs/MILESTONES.md` ← [references/templates/milestones.md](references/templates/milestones.md)。
+     進捗管理の正本。現在地マーカーは `▶ M1` で初期化し、各マイルストーン配下に
+     チェックボックスのタスクを置く（タスクは goal-feed ランで消化される前提の粗さで書く）
+   - `Plans.md` を新規作成し、冒頭に「## ロードマップ進捗」固定セクションを初期化
+     （現在地・残り・最終更新の 3 項目。以後 shime が上書き更新する）
+   - **コンテキスト汚染防止の原則**: この 2 ファイルはセッションに常駐させない。
+     読み込むのは shime 実行時と、ユーザーが明示的に進捗確認を求めたときのみ
+2. `CLAUDE.md` を**分岐処理**で整備（詳細は下記「CLAUDE.md 取扱いルール」）。
+   Project-Specific Notes には「ロードマップ（正本参照）」ポインタ（テンプレに含まれる 3 行）を必ず残す
 3. その他の基盤ファイルを生成
    - `.gitignore` ← [references/templates/gitignore](references/templates/gitignore)
    - `tasks/lessons.md`（空ファイル、1 行コメントのみ）
@@ -165,10 +189,10 @@ Plan モードは **Phase 3 終了まで維持**。
    - `memo.md` — **読み取り専用**。存在しても編集・削除しない
    - `Agent.md` — **読み取り専用**（Codex レビュー用指示書）。first-action は触らない
 6. **トップ画像の作成（スキップ可）**
-   - project-hero スキルを呼び出し、プロジェクトの英語名でヒーロー画像
+   - cover-image スキルを呼び出し、プロジェクトの英語名でヒーロー画像
      （`assets/hero.png`）を生成して README 冒頭に設置する
    - ユーザーが急いでいる場合・後回しにしたい場合はスキップし、
-     「後で `/project-hero` で追加できる」と一言添える
+     「後で `/cover-image` で追加できる」と一言添える
 7. 初回コミット
    ```bash
    git init
@@ -197,10 +221,17 @@ Plan モードは **Phase 3 終了まで維持**。
 
 ## Phase 5: チケット分割
 
+**goal-feed 接続について**: first-action の成果物（定義書＋ロードマップ）は、以後
+goal-feed（Codex 協調の実装ループ）に渡してチケット化・実装する運用が標準。
+ユーザーが goal-feed で回す意向なら、Phase 5〜7 を goal-feed に委ねてよい
+（その場合は定義書と `docs/MILESTONES.md` の進行中マイルストーンを入力として渡す）。
+チケットの Phase はマイルストーンの**下位**の区切りであり、チケット消化の積み上げが
+MILESTONES.md のタスクを埋めていく関係になる。以下は ticket-gen を直接使う場合の手順。
+
 ### 手順
 1. `Skill` ツールで `ticket-gen` を起動
 2. 入力として定義書パス（`docs/YYYY-MM-DD_First_definition.md`）を渡す
-3. ticket-gen の既存仕様に従い `docs/tickets/` 配下に Phase 分割されたチケットが生成される
+3. ticket-gen の仕様に従い `docs/tickets{YYYYMMDD}/` 配下に Phase 分割されたチケットが生成される
 4. **チケット出力をコミット**（git 履歴の整理）。
    出力先は決め打ちせず、**ticket-gen が完了報告で示した実際の出力先ディレクトリ**を add する:
    ```bash
@@ -217,16 +248,13 @@ Plan モードは **Phase 3 終了まで維持**。
 
 **使用ツール**: `codex-second-opinion` スキル（ファイル直接指定方式）。
 
-### 採用理由（過去の試行と決定）
-- `/codex:adversarial-review` プラグインは **diff ベース**で動作し、companion script 内で `git merge-base` を呼び出す。
-- empty tree SHA (`4b825dc642cb6eb9a060e54bf8d69288fbee4904`) は **tree オブジェクトであって commit ではない**ため、`git merge-base` がエラーで失敗する。
-- 単一コミット直後の「リポジトリ全体を対象にした批判レビュー」というユースケースは plugin の前提と噛み合わない。
-- `codex-second-opinion` スキルは **ファイルパスを直接渡す設計**で、diff 不要。Phase 6 のような初期定義書レビューに適合する。
-- `/codex:adversarial-review` は実装フェーズ（Phase 7 以降）の **コード差分レビュー**として後続利用可能。
+### 採用理由
+- `/codex:adversarial-review` は diff ベースで、初回コミット直後のリポジトリ全体レビューには使えない（Phase 7 以降のコード差分レビュー用）。
+- `codex-second-opinion` はファイルパスを直接渡せるため、Phase 6 の初期定義書レビューに合う。
 
 ### 手順（各 round）
 1. `Skill` ツールで `codex-second-opinion` を起動
-2. 入力: 定義書 (`docs/YYYY-MM-DD_First_definition.md`) + `docs/tickets/` 配下のファイル一式（パス指定で渡す）
+2. 入力: 定義書 (`docs/YYYY-MM-DD_First_definition.md`) + ticket-gen が報告した出力先のファイル一式（パス指定で渡す）
 3. レビュー観点を明示:
    - 要件の実現性・抜け漏れ
    - チケット粒度・依存関係・順序
@@ -259,6 +287,8 @@ Plan モードは **Phase 3 終了まで維持**。
 - [references/scoring-criteria.md](references/scoring-criteria.md) — Phase 3 の 3 軸スコアリング詳細
 - [references/context-hygiene.md](references/context-hygiene.md) — Project-First 原則と不要 MCP の disable 手順
 - [references/templates/first-definition.md](references/templates/first-definition.md) — Phase 4 の定義書テンプレ
+- [references/templates/roadmap.md](references/templates/roadmap.md) — USER_GUIDE/ROADMAP.md 雛形（大ゴール〜Mn 定義）
+- [references/templates/milestones.md](references/templates/milestones.md) — docs/MILESTONES.md 雛形（進捗正本）
 - [references/templates/claude-md.md](references/templates/claude-md.md) — プロジェクト用 CLAUDE.md 雛形
 - [references/templates/gitignore](references/templates/gitignore) — デフォルト .gitignore
 - [scripts/preflight.sh](scripts/preflight.sh) — Phase 0 ゲートチェック
@@ -270,6 +300,7 @@ Plan モードは **Phase 3 終了まで維持**。
 - **コンテキスト最適化**: グローバル有効でも今回のプロジェクトで使わない MCP は `disabledMcpjsonServers` で disable する。スキルは軽量（system-reminder のメタデータのみ）なので、明示要望がない限り disable しない。
 - **CLAUDE.md のグローバルベース部（`— ` 区切りより上）には絶対に触れない**。編集対象は `# Project-Specific Notes` 以降のみ。
 - **`memo.md` / `Agent.md` はユーザー領域 / Codex 領域**として読み取り専用。first-action は編集・削除しない。
+- **ロードマップの正本はファイル、コンテキストには入れない**: `USER_GUIDE/ROADMAP.md` / `docs/MILESTONES.md` はセッション常駐させず、shime 実行時と明示的な進捗確認時のみ読み込む。CLAUDE.md にはパスのポインタだけを書く。
 - **Codex レビューの major は必ず反映**。minor は `tasks/lessons.md` に蓄積し次サイクルで消化。
-- **各 Phase 完了時に進捗をユーザーに報告**（1–2 文）。
+- 各 Phase が終わったら、何が終わり次に何をするかをユーザーに伝える。
 - 未知のコマンド・未登録スキルに遭遇したら **止まってユーザーに確認**。自己判断で代替しない。

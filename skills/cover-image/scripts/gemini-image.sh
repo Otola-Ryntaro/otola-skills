@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# where: project-hero/scripts/gemini-image.sh
+# where: cover-image/scripts/gemini-image.sh
 # what : Gemini API (gemini-2.5-flash-image) で背景アートを1枚生成する
-# why  : oracle/ChatGPT 画像生成が失敗・枯渇した場合のフォールバック経路
+# why  : Codex・ComfyUI が使えない場合のフォールバック経路（三次）
 set -euo pipefail
 
 PROMPT="${1:?usage: gemini-image.sh \"<prompt>\" <output.png>}"

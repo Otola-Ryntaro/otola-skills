@@ -3,7 +3,6 @@
 ticket-gen で生成したチケット計画を、OpenAI Codex の第三者視点で厳しく評価し、
 Major 以上の指摘が出なくなるか最大ラウンドに到達するまで修正ループを回す。
 
-> ticket-gen の Phase 5 を独立コマンド化したもの。
 > 単独実行可、ticket-gen 完了後の任意ステップとしても呼び出せる。
 
 ## 引数
@@ -42,7 +41,7 @@ Major 以上の指摘が出なくなるか最大ラウンドに到達するま�
 `Skill(skill: "codex-second-opinion")` を呼び出し、以下の args を渡す:
 
 ```
-/codex:adversarial-review --wait --scope working-tree
+Pattern 1-C（差分なしの計画レビュー）で実行する。
 以下の観点で、チケット計画がユーザーの実装目標を達成できるかを厳しく評価してください。
 対象: <tickets-dir> 配下の ticket_index.md と全チケット + 元レポート。
 
