@@ -234,7 +234,7 @@ humanizer-ja #12「同義語ローテーション」は禁じるが、esseist �
 
 ## 脱AIパターン（humanizer-ja から継承・要約）
 
-以下は humanizer-ja の 34 パターン要約。esseist でも全部守る。詳細な事例は `humanizer-ja` スキルの SKILL.md を参照のこと。
+以下は humanizer-ja の 34 パターン要約。esseist でも全部守る。humanizer-ja 本体は本リポジトリでは配布していない。
 
 ### コンテンツ
 1. 重要性・意義の過度な強調（「極めて重要な転換点」「～の象徴」）
@@ -529,7 +529,7 @@ X 長文投稿やスレッドなど短い媒体では、note 等の長文と同�
 
 ## 参考
 
-- humanizer-ja: AI臭の除去ルール（34パターン＋安全弁）の土台
+- humanizer-ja: AI臭の除去ルール（34パターン＋安全弁）の土台。英語版 [humanizer](https://github.com/blader/humanizer)（MIT、Copyright (c) 2025 Siqi Chen）の日本語翻案
 - 想定する文体: 芥川賞作品・私小説・コラムニストの随筆・新聞のコラム欄
 - 核心原則: **書き手の呼吸を、文章の物理的なリズム（文長・段落・繰り返し）に翻訳する**
 
